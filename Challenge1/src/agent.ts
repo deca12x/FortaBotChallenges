@@ -1,26 +1,15 @@
-import {
-  BlockEvent,
-  Finding,
-  Initialize,
-  HandleBlock,
-  HealthCheck,
-  HandleTransaction,
-  HandleAlert,
-  AlertEvent,
-  TransactionEvent,
-  FindingSeverity,
-  FindingType,
-} from "forta-agent";
+import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent, ethers } from "forta-agent";
 
-// Constants
 const BOT_DEPLOYMENT_FUNCTION = "function createAgent(uint256 agentId,address ,string metadata,uint256[] chainIds)";
 const BOT_UPDATE_FUNCTION = "function updateAgent(uint256 agentId,string metadata,uint256[] chainIds)";
 const NETHERMIND_ADDRESS = "0x88dC3a2284FA62e0027d6D6B1fCfDd2141a143b8";
 const FORTA_REGISTRY_ADDRESS = "0x61447385B019187daa48e91c55c02AF1F1f3F863";
 
-// Provide the handleTransaction function with dependencies
 const provideHandleTransaction = (nethermindAddress: string, fortaRegistryAddress: string): HandleTransaction => {
   const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) => {
+    // if (txEvent.network == 1) console.log("Ethereum");
+    if (txEvent.network == 137) console.log("Polygon");
+
     const findings: Finding[] = [];
 
     if (txEvent.from !== nethermindAddress.toLowerCase()) return findings;
@@ -55,7 +44,6 @@ const provideHandleTransaction = (nethermindAddress: string, fortaRegistryAddres
   return handleTransaction;
 };
 
-// Exporting the handler function
 export default {
   handleTransaction: provideHandleTransaction(NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS),
 };
