@@ -12,7 +12,14 @@ This bot detects Forta bots deployed by Nethermind.
 ## Alerts
 
 - NEW-BOT-DEPLOYED
+
   - Fired when the `createAgent` function in the Forta Registry contract is called by the Nethermind EOA, i.e. a new Forta Bot is deployed by Nethermind
+  - Severity is always set to "low"
+  - Type is always set to "info"
+  - Metadata: agentId (string)
+
+- EXISTING-BOT-UPDATED
+  - Fired when the `updateAgent` function in the Forta Registry contract is called by the Nethermind EOA, i.e. an existing Forta Bot is updated by Nethermind
   - Severity is always set to "low"
   - Type is always set to "info"
   - Metadata: agentId (string)
