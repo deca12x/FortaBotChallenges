@@ -26,7 +26,8 @@ This bot detects Forta bots deployed by Nethermind.
 
 ## Test Data
 
-<!-- The bot behaviour can be verified with the following transactions:
-
-The test transaction examples should follow the format: [//txn hash//](//link to txn hash in block explorer//)
-- 0x3a0f757030beec55c22cbc545dd8a844cbbb2e6019461769e1bc3f3a95d10826 (15,000 USDT) -->
+1. returns empty findings if transaction is not from Nethermind address
+2. returns empty findings if transaction is not to Forta address
+3. returns empty findings if neither createAgent nor updateAgent are detected
+4. detects bot deployment
+5. detects bot update
