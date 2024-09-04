@@ -7,36 +7,28 @@ const FORTA_REGISTRY_ADDRESS = "0x61447385B019187daa48e91c55c02AF1F1f3F863";
 
 const provideHandleTransaction = (nethermindAddress: string, fortaRegistryAddress: string): HandleTransaction => {
   const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) => {
-    // if (txEvent.network == 1) console.log("Ethereum");
-    // if (txEvent.network == 137) console.log("Polygon");
-
     const findings: Finding[] = [];
 
-    if (txEvent.from !== nethermindAddress.toLowerCase()) return findings;
+    if (txEvent.from !== nethermindAddress) return findings;
+    if (txEvent.to !== fortaRegistryAddress) return findings;
 
-    const deploymentCalls = txEvent.filterFunction(BOT_DEPLOYMENT_FUNCTION, fortaRegistryAddress);
-    const updateCalls = txEvent.filterFunction(BOT_UPDATE_FUNCTION, fortaRegistryAddress);
+    const botEvents = txEvent.filterFunction([BOT_DEPLOYMENT_FUNCTION, BOT_UPDATE_FUNCTION], fortaRegistryAddress);
 
-    const processCalls = (calls: any[], functionType: string) => {
-      calls.forEach((call) => {
-        const isDeployment = functionType === BOT_DEPLOYMENT_FUNCTION;
-        findings.push(
-          Finding.fromObject({
-            name: isDeployment ? "Nethermind Bot Deployment" : "Nethermind Bot Update",
-            description: `Nethermind ${isDeployment ? "deployed a new" : "updated an existing"} bot with ID: ${call.args.agentId.toString()}`,
-            alertId: isDeployment ? "NEW-BOT-DEPLOYED" : "EXISTING-BOT-UPDATED",
-            severity: FindingSeverity.Low,
-            type: FindingType.Info,
-            metadata: {
-              agentId: call.args.agentId.toString(),
-            },
-          })
-        );
-      });
-    };
-
-    processCalls(deploymentCalls, BOT_DEPLOYMENT_FUNCTION);
-    processCalls(updateCalls, BOT_UPDATE_FUNCTION);
+    botEvents.forEach((event) => {
+      const isDeployment = event.name === "createAgent";
+      findings.push(
+        Finding.fromObject({
+          name: isDeployment ? "Nethermind Bot Deployment" : "Nethermind Bot Update",
+          description: `Nethermind ${isDeployment ? "deployed a new" : "updated an existing"} bot with ID: ${event.args.agentId.toString()}`,
+          alertId: isDeployment ? "NEW-BOT-DEPLOYED" : "EXISTING-BOT-UPDATED",
+          severity: FindingSeverity.Low,
+          type: FindingType.Info,
+          metadata: {
+            agentId: event.args.agentId.toString(),
+          },
+        })
+      );
+    });
 
     return findings;
   };

@@ -1,74 +1,78 @@
-// import {
-//   FindingType,
-//   FindingSeverity,
-//   Finding,
-//   HandleTransaction,
-//   createTransactionEvent,
-//   ethers,
-// } from "forta-agent";
-// import agent, {
-//   ERC20_TRANSFER_EVENT,
-//   TETHER_ADDRESS,
-//   TETHER_DECIMALS,
-// } from "./agent";
+import { Finding, HandleTransaction, FindingSeverity, FindingType, TransactionEvent } from "forta-agent";
+import agent from "./agent";
 
-// describe("high tether transfer agent", () => {
-//   let handleTransaction: HandleTransaction;
-//   const mockTxEvent = createTransactionEvent({} as any);
+describe("Nethermind Bot Deployment and Update Agent", () => {
+  let handleTransaction: HandleTransaction;
+  const mockNetherMindAddress = "0x88dC3a2284FA62e0027d6D6B1fCfDd2141a143b8";
+  const mockFortaRegistryAddress = "0x61447385B019187daa48e91c55c02AF1F1f3F863";
 
-//   beforeAll(() => {
-//     handleTransaction = agent.handleTransaction;
-//   });
+  beforeAll(() => {
+    handleTransaction = agent.handleTransaction;
+  });
 
-//   describe("handleTransaction", () => {
-//     it("returns empty findings if there are no Tether transfers", async () => {
-//       mockTxEvent.filterLog = jest.fn().mockReturnValue([]);
+  describe("handleTransaction", () => {
+    it("returns empty findings if transaction is not from Nethermind address", async () => {
+      const mockTxEvent = {
+        from: "0x1234567890123456789012345678901234567890",
+        to: mockFortaRegistryAddress,
+        filterFunction: jest.fn().mockReturnValue([]),
+      } as unknown as TransactionEvent;
 
-//       const findings = await handleTransaction(mockTxEvent);
+      const findings = await handleTransaction(mockTxEvent);
 
-//       expect(findings).toStrictEqual([]);
-//       expect(mockTxEvent.filterLog).toHaveBeenCalledTimes(1);
-//       expect(mockTxEvent.filterLog).toHaveBeenCalledWith(
-//         ERC20_TRANSFER_EVENT,
-//         TETHER_ADDRESS
-//       );
-//     });
+      expect(findings).toHaveLength(0);
+    });
 
-//     it("returns a finding if there is a Tether transfer over 10,000", async () => {
-//       const mockTetherTransferEvent = {
-//         args: {
-//           from: "0xabc",
-//           to: "0xdef",
-//           value: ethers.BigNumber.from("20000000000"), //20k with 6 decimals
-//         },
-//       };
-//       mockTxEvent.filterLog = jest
-//         .fn()
-//         .mockReturnValue([mockTetherTransferEvent]);
+    it("detects bot deployment and returns a finding", async () => {
+      const mockTxEvent = {
+        from: mockNetherMindAddress,
+        to: mockFortaRegistryAddress,
+        filterFunction: jest.fn().mockReturnValue([
+          {
+            name: "createAgent",
+            args: { agentId: "123" },
+          },
+        ]),
+      } as unknown as TransactionEvent;
 
-//       const findings = await handleTransaction(mockTxEvent);
+      const findings = await handleTransaction(mockTxEvent);
 
-//       const normalizedValue = mockTetherTransferEvent.args.value.div(
-//         10 ** TETHER_DECIMALS
-//       );
-//       expect(findings).toStrictEqual([
-//         Finding.fromObject({
-//           name: "High Tether Transfer",
-//           description: `High amount of USDT transferred: ${normalizedValue}`,
-//           alertId: "FORTA-1",
-//           severity: FindingSeverity.Low,
-//           type: FindingType.Info,
-//           metadata: {
-//             to: mockTetherTransferEvent.args.to,
-//             from: mockTetherTransferEvent.args.from,
-//           },
-//         }),
-//       ]);
-//       expect(mockTxEvent.filterLog).toHaveBeenCalledTimes(1);
-//       expect(mockTxEvent.filterLog).toHaveBeenCalledWith(
-//         ERC20_TRANSFER_EVENT,
-//         TETHER_ADDRESS
-//       );
-//     });
-//   });
-// });
+      expect(findings).toHaveLength(1);
+      expect(findings[0]).toEqual(
+        expect.objectContaining({
+          name: "Nethermind Bot Deployment",
+          description: `Nethermind deployed a new bot with ID: 123`,
+          alertId: "NEW-BOT-DEPLOYED",
+          severity: FindingSeverity.Low,
+          type: FindingType.Info,
+        } as Finding)
+      );
+    });
+
+    it("detects bot update and returns a finding", async () => {
+      const mockTxEvent = {
+        from: mockNetherMindAddress,
+        to: mockFortaRegistryAddress,
+        filterFunction: jest.fn().mockReturnValue([
+          {
+            name: "updateAgent",
+            args: { agentId: "456" },
+          },
+        ]),
+      } as unknown as TransactionEvent;
+
+      const findings = await handleTransaction(mockTxEvent);
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0]).toEqual(
+        expect.objectContaining({
+          name: "Nethermind Bot Update",
+          description: `Nethermind updated an existing bot with ID: 456`,
+          alertId: "EXISTING-BOT-UPDATED",
+          severity: FindingSeverity.Low,
+          type: FindingType.Info,
+        } as Finding)
+      );
+    });
+  });
+});
