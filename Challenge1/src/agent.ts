@@ -8,7 +8,7 @@ const FORTA_REGISTRY_ADDRESS = "0x61447385B019187daa48e91c55c02AF1F1f3F863";
 const provideHandleTransaction = (nethermindAddress: string, fortaRegistryAddress: string): HandleTransaction => {
   const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) => {
     // if (txEvent.network == 1) console.log("Ethereum");
-    if (txEvent.network == 137) console.log("Polygon");
+    // if (txEvent.network == 137) console.log("Polygon");
 
     const findings: Finding[] = [];
 
