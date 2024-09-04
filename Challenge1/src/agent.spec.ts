@@ -23,6 +23,30 @@ describe("Nethermind Bot Deployment and Update Agent", () => {
       expect(findings).toHaveLength(0);
     });
 
+    it("returns empty findings if transaction is not to Forta address", async () => {
+      const mockTxEvent = {
+        from: mockNetherMindAddress,
+        to: "0x1234567890123456789012345678901234567890",
+        filterFunction: jest.fn().mockReturnValue([]),
+      } as unknown as TransactionEvent;
+
+      const findings = await handleTransaction(mockTxEvent);
+
+      expect(findings).toHaveLength(0);
+    });
+
+    it("returns empty findings if neither createAgent nor updateAgent are detected", async () => {
+      const mockTxEvent = {
+        from: mockNetherMindAddress,
+        to: mockFortaRegistryAddress,
+        filterFunction: jest.fn().mockReturnValue([]),
+      } as unknown as TransactionEvent;
+
+      const findings = await handleTransaction(mockTxEvent);
+
+      expect(findings).toHaveLength(0);
+    });
+
     it("detects bot deployment and returns a finding", async () => {
       const mockTxEvent = {
         from: mockNetherMindAddress,
