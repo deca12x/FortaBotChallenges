@@ -3,6 +3,7 @@
   "displayName": "Bot Checking Nethermind Deployment and Updates of Forta Bots",
   "version": "0.0.1",
   "description": "This bot detects Forta bots deployed by Nethermind.",
+  "longDescription": "This bot monitors the Forta network for deployments and updates of Forta bots initiated by Nethermind. It listens for specific smart contract events related to bot creation and updates, providing alerts when these actions occur. The bot is designed to enhance the visibility of bot activities on the network, ensuring that users are informed about new deployments and updates to existing bots. It operates on the Polygon chain and utilizes the Forta agent framework for efficient monitoring and alerting.",
   "repository": "https://github.com/deca12x/FortaBotChallenges/tree/main/Challenge1",
   "licenseUrl": "https://github.com/forta-network/forta-bot-sdk/blob/master/starter-project/LICENSE.md",
   "promoUrl": "https://forta.org",
