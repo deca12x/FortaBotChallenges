@@ -1,6 +1,6 @@
 {
-  "name": "forta-bot-check-bot-deployments",
-  "displayName": "Nethermind Deployment of Forta Bots",
+  "name": "Bot-Detection Bot",
+  "displayName": "Bot Checking Nethermind Deployment of Forta Bots",
   "version": "0.0.1",
   "description": "This bot detects Forta bots deployed by Nethermind.",
   "repository": "https://github.com/deca12x/FortaBotChallenges/tree/main/Challenge1",

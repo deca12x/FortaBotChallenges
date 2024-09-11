@@ -25,8 +25,18 @@ This bot detects Forta bots deployed by Nethermind.
 
 ## Test Data
 
+The bot's functionality is as follows:
+
 1. returns empty findings if transaction is not from Nethermind address
 2. returns empty findings if transaction is not to Forta address
 3. returns empty findings if neither createAgent nor updateAgent are detected
 4. detects bot deployment
 5. detects bot update
+
+Detection of bot creation and updating can be verified with the following transactions on Polygon:
+
+`createAgent`
+https://polygonscan.com/tx/0x6a72649c16d5246a207abdef78c8ce2148ed67c6c8a672bdac85e4c6ea2bdac8
+
+`updateAgent`
+https://polygonscan.com/tx/0xc708473b78093b269b5fe5b674fb76fc88785866e1a5b28324edbe4744de5fbe

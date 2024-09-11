@@ -1,7 +1,8 @@
 import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent, ethers } from "forta-agent";
 
 const BOT_DEPLOYMENT_FUNCTION = "function createAgent(uint256 agentId,address ,string metadata,uint256[] chainIds)";
-const BOT_UPDATE_FUNCTION = "function updateAgent(uint256 agentId,string metadata,uint256[] chainIds)";
+// const BOT_UPDATE_FUNCTION = "function updateAgent(uint256 agentId,string metadata,uint256[] chainIds)";
+const BOT_UPDATE_FUNCTION = "function updateAgent(uint256,string,uint256[])";
 const NETHERMIND_ADDRESS = "0x88dC3a2284FA62e0027d6D6B1fCfDd2141a143b8";
 const FORTA_REGISTRY_ADDRESS = "0x61447385B019187daa48e91c55c02AF1F1f3F863";
 
@@ -9,8 +10,9 @@ const provideHandleTransaction = (nethermindAddress: string, fortaRegistryAddres
   const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
 
-    if (txEvent.from !== nethermindAddress) return findings;
-    if (txEvent.to !== fortaRegistryAddress) return findings;
+    // Convert addresses to lowercase for comparison
+    if (txEvent.from.toLowerCase() !== nethermindAddress.toLowerCase()) return findings;
+    if (txEvent.to?.toLowerCase() !== fortaRegistryAddress.toLowerCase()) return findings;
 
     const botEvents = txEvent.filterFunction([BOT_DEPLOYMENT_FUNCTION, BOT_UPDATE_FUNCTION], fortaRegistryAddress);
 
@@ -19,12 +21,12 @@ const provideHandleTransaction = (nethermindAddress: string, fortaRegistryAddres
       findings.push(
         Finding.fromObject({
           name: isDeployment ? "Nethermind Bot Deployment" : "Nethermind Bot Update",
-          description: `Nethermind ${isDeployment ? "deployed a new" : "updated an existing"} bot with ID: ${event.args.agentId.toString()}`,
+          description: `Nethermind ${isDeployment ? "deployed a new" : "updated an existing"} bot with ID: ${event.args.agentId?.toString()}`,
           alertId: isDeployment ? "NEW-BOT-DEPLOYED" : "EXISTING-BOT-UPDATED",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
           metadata: {
-            agentId: event.args.agentId.toString(),
+            agentId: event.args.agentId?.toString(),
           },
         })
       );
