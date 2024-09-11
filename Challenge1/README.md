@@ -1,4 +1,4 @@
-# Nethermind Deployment of Forta Bots
+# Bot-Detection Bot
 
 ## Description
 
@@ -6,7 +6,6 @@ This bot detects Forta bots deployed by Nethermind.
 
 ## Supported Chains
 
-- Ethereum
 - Polygon
 
 ## Alerts
