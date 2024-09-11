@@ -1,5 +1,5 @@
 {
-  "name": "Bot-Detection Bot",
+  "name": "bot-detection-bot",
   "displayName": "Bot Checking Nethermind Deployment and Updates of Forta Bots",
   "version": "0.0.1",
   "description": "This bot detects Forta bots deployed by Nethermind.",
