@@ -1,9 +1,5 @@
 import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent } from "forta-agent";
-
-const BOT_DEPLOYMENT_FUNCTION = "function createAgent(uint256 agentId,address ,string metadata,uint256[] chainIds)";
-const BOT_UPDATE_FUNCTION = "function updateAgent(uint256 agentId,string metadata,uint256[] chainIds)";
-const NETHERMIND_ADDRESS = "0x88dC3a2284FA62e0027d6D6B1fCfDd2141a143b8";
-const FORTA_REGISTRY_ADDRESS = "0x61447385B019187daa48e91c55c02AF1F1f3F863";
+import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS } from "./constants";
 
 export function provideHandleTransaction(): HandleTransaction {
   return async (txEvent: TransactionEvent) => {
@@ -12,10 +8,7 @@ export function provideHandleTransaction(): HandleTransaction {
     if (txEvent.from.toLowerCase() !== NETHERMIND_ADDRESS.toLowerCase()) return findings;
     if (txEvent.to?.toLowerCase() !== FORTA_REGISTRY_ADDRESS.toLowerCase()) return findings;
 
-    const filteredTxEvents = txEvent.filterFunction(
-      [BOT_DEPLOYMENT_FUNCTION, BOT_UPDATE_FUNCTION],
-      FORTA_REGISTRY_ADDRESS
-    );
+    const filteredTxEvents = txEvent.filterFunction([CREATE_AGENT_ABI, UPDATE_AGENT_ABI], FORTA_REGISTRY_ADDRESS);
 
     filteredTxEvents.forEach((event) => {
       const isDeployment = event.name === "createAgent";
