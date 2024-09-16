@@ -12,9 +12,12 @@ export function provideHandleTransaction(): HandleTransaction {
     if (txEvent.from.toLowerCase() !== NETHERMIND_ADDRESS.toLowerCase()) return findings;
     if (txEvent.to?.toLowerCase() !== FORTA_REGISTRY_ADDRESS.toLowerCase()) return findings;
 
-    const botEvents = txEvent.filterFunction([BOT_DEPLOYMENT_FUNCTION, BOT_UPDATE_FUNCTION], FORTA_REGISTRY_ADDRESS);
+    const filteredTxEvents = txEvent.filterFunction(
+      [BOT_DEPLOYMENT_FUNCTION, BOT_UPDATE_FUNCTION],
+      FORTA_REGISTRY_ADDRESS
+    );
 
-    botEvents.forEach((event) => {
+    filteredTxEvents.forEach((event) => {
       const isDeployment = event.name === "createAgent";
       findings.push(
         Finding.fromObject({
