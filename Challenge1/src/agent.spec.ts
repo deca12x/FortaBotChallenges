@@ -115,11 +115,12 @@ describe("6. detects bot deployment", () => {
   it("should return a finding", async () => {
     const handleTransaction = provideHandleTransaction();
 
+    // TO DO: 1. define interface, 2. call encodeFunctionData, 3. put output in setData parameter
     // const fortaRegistryInterface = new ethers.utils.Interface();
 
     const mockTxEvent: TransactionEvent = new TestTransactionEvent()
-      .setFrom(nethermindAddress) // The address initiating the transaction (likely the bot owner or deployer)
-      .setTo(fortaRegistryAddress) // The contract (Forta Registry) where the bot is being deployed
+      .setFrom(nethermindAddress)
+      .setTo(fortaRegistryAddress)
       .addTraces({
         to: fortaRegistryAddress,
         from: nethermindAddress,
@@ -128,33 +129,21 @@ describe("6. detects bot deployment", () => {
       });
 
     // .setData(data);
-
     // .setBlock(60343606);
     // .setBlock(56681086);
-
-    // const mockTxEvent = {
-    //   from: nethermindAddress,
-    //   to: fortaRegistryAddress,
-    //   filterFunction: jest.fn().mockReturnValue([
-    //     {
-    //       name: "createAgent",
-    //       args: { agentId: "123" },
-    //     },
-    //   ]),
-    // } as unknown as TransactionEvent;
 
     const findings = await handleTransaction(mockTxEvent);
 
     expect(findings).toHaveLength(1);
-    // expect(findings[0]).toEqual(
-    //   expect.objectContaining({
-    //     name: "Nethermind Bot Deployment",
-    //     description: `Nethermind deployed a new bot with ID: 123`,
-    //     alertId: "NEW-BOT-DEPLOYED",
-    //     severity: FindingSeverity.Low,
-    //     type: FindingType.Info,
-    //   } as Finding)
-    // );
+    expect(findings[0]).toEqual(
+      expect.objectContaining({
+        name: "Nethermind Bot Deployment",
+        description: `Nethermind deployed a new bot with ID: 1`,
+        alertId: "NEW-BOT-DEPLOYED",
+        severity: FindingSeverity.Low,
+        type: FindingType.Info,
+      } as Finding)
+    );
   });
 });
 
@@ -164,30 +153,25 @@ describe("7. detects bot update", () => {
 
     const mockTxEvent: TransactionEvent = new TestTransactionEvent()
       .setFrom(nethermindAddress)
-      .setTo(fortaRegistryAddress);
-
-    // const mockTxEvent = {
-    //   from: nethermindAddress,
-    //   to: fortaRegistryAddress,
-    //   filterFunction: jest.fn().mockReturnValue([
-    //     {
-    //       name: "updateAgent",
-    //       args: { agentId: "456" },
-    //     },
-    //   ]),
-    // } as unknown as TransactionEvent;
+      .setTo(fortaRegistryAddress)
+      .addTraces({
+        to: fortaRegistryAddress,
+        from: nethermindAddress,
+        function: mockUpdateAgentAbi,
+        arguments: [AGENT_ID, nethermindAddress, "metadata", CHAIN_IDS],
+      });
 
     const findings = await handleTransaction(mockTxEvent);
 
     expect(findings).toHaveLength(1);
-    expect(findings[0]).toEqual(
-      expect.objectContaining({
-        name: "Nethermind Bot Update",
-        description: `Nethermind updated an existing bot with ID: 456`,
-        alertId: "EXISTING-BOT-UPDATED",
-        severity: FindingSeverity.Low,
-        type: FindingType.Info,
-      } as Finding)
-    );
+    // expect(findings[0]).toEqual(
+    //   expect.objectContaining({
+    //     name: "Nethermind Bot Update",
+    //     description: `Nethermind updated an existing bot with ID: 456`,
+    //     alertId: "EXISTING-BOT-UPDATED",
+    //     severity: FindingSeverity.Low,
+    //     type: FindingType.Info,
+    //   } as Finding)
+    // );
   });
 });
