@@ -28,6 +28,7 @@ export function provideHandleTransaction(): HandleTransaction {
           type: FindingType.Info,
           metadata: {
             agentId: event.args.agentId?.toString(),
+            chainId: "137",
           },
         })
       );
