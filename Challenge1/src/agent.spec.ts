@@ -11,13 +11,13 @@ describe("Detection of bot deployments and updates, only by Nethermind, only to 
   let handleTransaction: HandleTransaction;
   let mockTxEvent = new TestTransactionEvent();
   beforeAll(() => {
-    handleTransaction = provideHandleTransaction();
-    // handleTransaction = provideHandleTransaction(
-    //   CREATE_AGENT_SIGNATURE,
-    //   UPDATE_AGENT_SIGNATURE,
-    //   mockNethermindDeployerAddress,
-    //   mockFortaRegistryAddress
-    // );
+    // handleTransaction = provideHandleTransaction();
+    handleTransaction = provideHandleTransaction(
+      CREATE_AGENT_ABI,
+      UPDATE_AGENT_ABI,
+      createAddress("0x01"),
+      createAddress("0x02")
+    );
   });
 
   beforeEach(() => {

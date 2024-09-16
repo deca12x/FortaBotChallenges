@@ -1,14 +1,19 @@
 import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent } from "forta-agent";
 import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS } from "./constants";
 
-export function provideHandleTransaction(): HandleTransaction {
+export function provideHandleTransaction(
+  createAgentAbi: string,
+  updateAgentAbi: string,
+  nethermindAddress: string,
+  fortaRegistryAddress: string
+): HandleTransaction {
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
 
-    if (txEvent.from.toLowerCase() !== NETHERMIND_ADDRESS.toLowerCase()) return findings;
-    if (txEvent.to?.toLowerCase() !== FORTA_REGISTRY_ADDRESS.toLowerCase()) return findings;
+    if (txEvent.from.toLowerCase() !== nethermindAddress.toLowerCase()) return findings;
+    if (txEvent.to?.toLowerCase() !== fortaRegistryAddress.toLowerCase()) return findings;
 
-    const filteredTxEvents = txEvent.filterFunction([CREATE_AGENT_ABI, UPDATE_AGENT_ABI], FORTA_REGISTRY_ADDRESS);
+    const filteredTxEvents = txEvent.filterFunction([createAgentAbi, updateAgentAbi], fortaRegistryAddress);
 
     filteredTxEvents.forEach((event) => {
       const isDeployment = event.name === "createAgent";
@@ -31,13 +36,15 @@ export function provideHandleTransaction(): HandleTransaction {
   };
 }
 
-// Provide function for initialize (if needed later)
-export const provideInitialize = () => async () => {
-  // Initialization logic if needed
-};
+// export const provideInitialize = () => async () => {
+//   // Initialization logic if needed
+// };
 
-// Default export as an object with initialize and handleTransaction
 export default {
-  initialize: provideInitialize(),
-  handleTransaction: provideHandleTransaction(),
+  handleTransaction: provideHandleTransaction(
+    CREATE_AGENT_ABI,
+    UPDATE_AGENT_ABI,
+    NETHERMIND_ADDRESS,
+    FORTA_REGISTRY_ADDRESS
+  ),
 };
