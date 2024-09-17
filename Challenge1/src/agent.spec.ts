@@ -4,18 +4,27 @@ import { TestTransactionEvent } from "forta-agent-tools/lib/test";
 import { provideHandleTransaction } from "./agent";
 import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, MOCK_CHAIN_IDS, MOCK_AGENT_ID } from "./constants";
 
-const nethermindAddress = "0x88dC3a2284FA62e0027d6D6B1fCfDd2141a143b8";
-const fortaRegistryAddress = "0x61447385B019187daa48e91c55c02AF1F1f3F863";
-
 const mockNethermindAddress = createAddress("0x01");
 const mockFortaRegistryAddress = createAddress("0x02");
 const mockOtherAddress = createAddress("0x03");
+
+const ifaceForSetData = new ethers.utils.Interface([CREATE_AGENT_ABI, UPDATE_AGENT_ABI]);
+const encodedCreateAgentData = ifaceForSetData.encodeFunctionData("createAgent", [
+  MOCK_AGENT_ID,
+  mockNethermindAddress,
+  "metadata",
+  MOCK_CHAIN_IDS,
+]);
+const encodedUpdateAgentData = ifaceForSetData.encodeFunctionData("updateAgent", [
+  MOCK_AGENT_ID,
+  "metadata",
+  MOCK_CHAIN_IDS,
+]);
 
 describe("Detection of bot deployments and updates, only by Nethermind, only to Forta Registry.", () => {
   let handleTransaction: HandleTransaction;
   let mockTxEvent = new TestTransactionEvent();
   beforeAll(() => {
-    // handleTransaction = provideHandleTransaction();
     handleTransaction = provideHandleTransaction(
       CREATE_AGENT_ABI,
       UPDATE_AGENT_ABI,
@@ -29,29 +38,29 @@ describe("Detection of bot deployments and updates, only by Nethermind, only to 
   });
 
   it("1. returns empty findings if not from Nethermind address", async () => {
-    mockTxEvent
-      .setFrom(mockOtherAddress)
-      .setTo(fortaRegistryAddress)
-      .addTraces({
-        from: mockNethermindAddress,
-        to: fortaRegistryAddress,
-        function: CREATE_AGENT_ABI,
-        arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
-      });
+    mockTxEvent.setFrom(mockOtherAddress).setTo(mockFortaRegistryAddress).setData(encodedCreateAgentData);
+
+    // .addTraces({
+    //   from: mockNethermindAddress,
+    //   to: mockFortaRegistryAddress,
+    //   function: CREATE_AGENT_ABI,
+    //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
+    // });
+
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toHaveLength(0);
   });
 
   it("2. returns empty findings if not to Forta Registry", async () => {
-    mockTxEvent
-      .setFrom(mockNethermindAddress)
-      .setTo(mockOtherAddress)
-      .addTraces({
-        from: mockNethermindAddress,
-        to: mockFortaRegistryAddress,
-        function: CREATE_AGENT_ABI,
-        arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
-      });
+    mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedCreateAgentData);
+
+    // .addTraces({
+    //   from: mockNethermindAddress,
+    //   to: mockFortaRegistryAddress,
+    //   function: CREATE_AGENT_ABI,
+    //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
+    // });
+
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toHaveLength(0);
   });
@@ -63,48 +72,42 @@ describe("Detection of bot deployments and updates, only by Nethermind, only to 
   });
 
   it("4. returns empty findings if transaction calls createAgent but in wrong contract", async () => {
-    mockTxEvent
-      .setFrom(mockNethermindAddress)
-      .setTo(mockOtherAddress)
-      .addTraces({
-        from: mockNethermindAddress,
-        to: mockFortaRegistryAddress,
-        function: CREATE_AGENT_ABI,
-        arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
-      });
+    mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedCreateAgentData);
+
+    // .addTraces({
+    //   from: mockNethermindAddress,
+    //   to: mockFortaRegistryAddress,
+    //   function: CREATE_AGENT_ABI,
+    //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
+    // });
+
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toHaveLength(0);
   });
 
   it("5. returns empty findings if transaction calls updateAgent but in wrong contract", async () => {
-    mockTxEvent
-      .setFrom(mockNethermindAddress)
-      .setTo(mockOtherAddress)
-      .addTraces({
-        from: mockNethermindAddress,
-        to: mockFortaRegistryAddress,
-        function: UPDATE_AGENT_ABI,
-        arguments: [MOCK_AGENT_ID, "metadata", MOCK_CHAIN_IDS],
-      });
+    mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedUpdateAgentData);
+
+    // .addTraces({
+    //   from: mockNethermindAddress,
+    //   to: mockFortaRegistryAddress,
+    //   function: UPDATE_AGENT_ABI,
+    //   arguments: [MOCK_AGENT_ID, "metadata", MOCK_CHAIN_IDS],
+    // });
+
     const findings = await handleTransaction(mockTxEvent);
-    expect(findings).toHaveLength(0); // Expecting empty findings
+    expect(findings).toHaveLength(0);
   });
 
   it("6. detects bot deployment", async () => {
-    // TO DO: 1. define interface, 2. call encodeFunctionData, 3. put output in setData parameter
-    // const fortaRegistryInterface = new ethers.utils.Interface();
+    mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedCreateAgentData);
 
-    mockTxEvent
-      .setFrom(mockNethermindAddress)
-      .setTo(mockFortaRegistryAddress)
-      .addTraces({
-        from: mockNethermindAddress,
-        to: mockFortaRegistryAddress,
-        function: CREATE_AGENT_ABI,
-        arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
-      });
-
-    // .setData(data);
+    // .addTraces({
+    //   from: mockNethermindAddress,
+    //   to: mockFortaRegistryAddress,
+    //   function: CREATE_AGENT_ABI,
+    //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
+    // });
     // .setBlock(60343606);
     // .setBlock(56681086);
 
@@ -123,15 +126,14 @@ describe("Detection of bot deployments and updates, only by Nethermind, only to 
   });
 
   it("7. detects bot update", async () => {
-    mockTxEvent
-      .setFrom(mockNethermindAddress)
-      .setTo(mockFortaRegistryAddress)
-      .addTraces({
-        from: mockNethermindAddress,
-        to: mockFortaRegistryAddress,
-        function: UPDATE_AGENT_ABI,
-        arguments: [MOCK_AGENT_ID, "metadata", MOCK_CHAIN_IDS],
-      });
+    mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedUpdateAgentData);
+
+    // .addTraces({
+    //   from: mockNethermindAddress,
+    //   to: mockFortaRegistryAddress,
+    //   function: UPDATE_AGENT_ABI,
+    //   arguments: [MOCK_AGENT_ID, "metadata", MOCK_CHAIN_IDS],
+    // });
 
     const findings = await handleTransaction(mockTxEvent);
 
