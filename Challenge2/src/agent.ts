@@ -1,4 +1,4 @@
-import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent } from "forta-agent";
+import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent, ethers } from "forta-agent";
 import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS } from "./constants";
 
 export function provideHandleTransaction(
@@ -20,7 +20,9 @@ export function provideHandleTransaction(
       findings.push(
         Finding.fromObject({
           name: isDeployment ? "Nethermind Bot Deployment" : "Nethermind Bot Update",
-          description: `Nethermind ${isDeployment ? "deployed a new" : "updated an existing"} bot with ID: ${event.args.agentId?.toString()}`,
+          description: `Nethermind ${
+            isDeployment ? "deployed a new" : "updated an existing"
+          } bot with ID: ${event.args.agentId?.toString()}`,
           alertId: isDeployment ? "NEW-BOT-DEPLOYED" : "EXISTING-BOT-UPDATED",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
@@ -35,10 +37,6 @@ export function provideHandleTransaction(
     return findings;
   };
 }
-
-// export const provideInitialize = () => async () => {
-//   // Initialization logic if needed
-// };
 
 export default {
   handleTransaction: provideHandleTransaction(

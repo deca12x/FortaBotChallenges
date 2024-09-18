@@ -1,45 +1,26 @@
-# Bot-Detection Bot
+# Large Tether Transfer Agent
 
 ## Description
 
-A bot that detects swaps on Uniswap V3.
+This agent detects transactions with large Tether transfers
 
 ## Supported Chains
 
-- **Polygon**
+- Ethereum
+- List any other chains this agent can support e.g. BSC
 
 ## Alerts
 
-### NEW-BOT-DEPLOYED
+Describe each of the type of alerts fired by this agent
 
-- **Fired**: When the `createAgent` function in the Forta Registry contract is called by the Nethermind EOA (Externally Owned Account), i.e., a new Forta bot is deployed by Nethermind.
-- **Severity**: Low
-- **Type**: Info
-- **Metadata**:
-  - `agentId` (string)
-
-### EXISTING-BOT-UPDATED
-
-- **Fired**: When the `updateAgent` function in the Forta Registry contract is called by the Nethermind EOA, i.e., an existing Forta bot is updated by Nethermind.
-- **Severity**: Low
-- **Type**: Info
-- **Metadata**:
-  - `agentId` (string)
+- FORTA-1
+  - Fired when a transaction contains a Tether transfer over 10,000 USDT
+  - Severity is always set to "low" (mention any conditions where it could be something else)
+  - Type is always set to "info" (mention any conditions where it could be something else)
+  - Mention any other type of metadata fields included with this alert
 
 ## Test Data
 
-The bot's functionality can be verified with the following conditions:
+The agent behaviour can be verified with the following transactions:
 
-1. Returns empty findings if the transaction is **not from the Nethermind** address.
-2. Returns empty findings if the transaction is **not to the Forta** address.
-3. Returns empty findings if **neither** `createAgent` nor `updateAgent` are detected.
-4. Detects **bot deployment**.
-5. Detects **bot update**.
-
-### Transaction Examples on Polygon:
-
-- **createAgent**:
-  [0x6a72649c16d5246a207abdef78c8ce2148ed67c6c8a672bdac85e4c6ea2bdac8](https://polygonscan.com/tx/0x6a72649c16d5246a207abdef78c8ce2148ed67c6c8a672bdac85e4c6ea2bdac8)
-
-- **updateAgent**:
-  [0xc708473b78093b269b5fe5b674fb76fc88785866e1a5b28324edbe4744de5fbe](https://polygonscan.com/tx/0xc708473b78093b269b5fe5b674fb76fc88785866e1a5b28324edbe4744de5fbe)
+- 0x3a0f757030beec55c22cbc545dd8a844cbbb2e6019461769e1bc3f3a95d10826 (15,000 USDT)
