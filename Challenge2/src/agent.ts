@@ -1,11 +1,14 @@
 import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent, ethers } from "forta-agent";
 import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS } from "./constants";
 
+// getPoolValues
+// computePoolAddress
+// isUniswapPoolAddress
+
 export function provideHandleTransaction(
-  createAgentAbi: string,
-  updateAgentAbi: string,
-  nethermindAddress: string,
-  fortaRegistryAddress: string
+  UNI_FACTORY_ADDRESS: string,
+  UNI_SWAP_EVENT_ABI: string,
+  provider: ethers.providers.JsonRpcProvider
 ): HandleTransaction {
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
