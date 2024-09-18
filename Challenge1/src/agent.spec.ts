@@ -2,7 +2,7 @@ import { Finding, HandleTransaction, FindingSeverity, FindingType, TransactionEv
 import { createAddress } from "forta-agent-tools";
 import { TestTransactionEvent } from "forta-agent-tools/lib/test";
 import { provideHandleTransaction } from "./agent";
-import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, OTHER_FUNCTION_ABI, MOCK_CHAIN_IDS, MOCK_AGENT_ID } from "./constants";
+import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, OTHER_FUNCTION_ABI, CHAIN_IDS, MOCK_AGENT_ID } from "./constants";
 
 const mockNethermindAddress = createAddress("0x01");
 const mockFortaRegistryAddress = createAddress("0x02");
@@ -13,12 +13,12 @@ const encodedCreateAgentData = ifaceForSetData.encodeFunctionData("createAgent",
   MOCK_AGENT_ID,
   mockNethermindAddress,
   "metadata",
-  MOCK_CHAIN_IDS,
+  CHAIN_IDS,
 ]);
 const encodedUpdateAgentData = ifaceForSetData.encodeFunctionData("updateAgent", [
   MOCK_AGENT_ID,
   "metadata",
-  MOCK_CHAIN_IDS,
+  CHAIN_IDS,
 ]);
 const encodedOtherFunctionData = ifaceForSetData.encodeFunctionData("isRegistered", [MOCK_AGENT_ID]);
 
@@ -34,7 +34,8 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
       CREATE_AGENT_ABI,
       UPDATE_AGENT_ABI,
       mockNethermindAddress,
-      mockFortaRegistryAddress
+      mockFortaRegistryAddress,
+      CHAIN_IDS[0].toString()
     );
   });
 
@@ -79,7 +80,7 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
     //   from: mockNethermindAddress,
     //   to: mockFortaRegistryAddress,
     //   function: CREATE_AGENT_ABI,
-    //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
+    //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", CHAIN_IDS],
     // });
     // .setBlock(60343606);
     // .setBlock(56681086);

@@ -1,11 +1,12 @@
 import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent } from "forta-agent";
-import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS } from "./constants";
+import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS, CHAIN_IDS } from "./constants";
 
 export function provideHandleTransaction(
   createAgentAbi: string,
   updateAgentAbi: string,
   nethermindAddress: string,
-  fortaRegistryAddress: string
+  fortaRegistryAddress: string,
+  chainId: string
 ): HandleTransaction {
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
@@ -26,7 +27,7 @@ export function provideHandleTransaction(
           type: FindingType.Info,
           metadata: {
             agentId: event.args.agentId?.toString(),
-            chainId: "137",
+            chainId: chainId,
           },
         })
       );
@@ -45,6 +46,7 @@ export default {
     CREATE_AGENT_ABI,
     UPDATE_AGENT_ABI,
     NETHERMIND_ADDRESS,
-    FORTA_REGISTRY_ADDRESS
+    FORTA_REGISTRY_ADDRESS,
+    CHAIN_IDS[0].toString()
   ),
 };
