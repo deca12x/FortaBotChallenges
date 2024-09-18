@@ -82,6 +82,11 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
 
     const findings = await handleTransaction(mockTxEvent);
 
+    // Second transaction to test if bot picks up only the createAgent function
+    const mockTxEvent2 = new TestTransactionEvent();
+    mockTxEvent2.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedOtherFunctionData);
+    findings.push(...(await handleTransaction(mockTxEvent2)));
+
     expect(findings).toHaveLength(1);
     expect(findings[0]).toEqual(
       expect.objectContaining({
