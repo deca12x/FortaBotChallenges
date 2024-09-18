@@ -14,19 +14,19 @@ export function provideHandleTransaction(
     if (txEvent.from.toLowerCase() !== nethermindAddress.toLowerCase()) return findings;
     if (txEvent.to?.toLowerCase() !== fortaRegistryAddress.toLowerCase()) return findings;
 
-    const filteredTxEvents = txEvent.filterFunction([createAgentAbi, updateAgentAbi], fortaRegistryAddress);
+    const filteredFunctions = txEvent.filterFunction([createAgentAbi, updateAgentAbi], fortaRegistryAddress);
 
-    filteredTxEvents.forEach((event) => {
-      const isDeployment = event.name === "createAgent";
+    filteredFunctions.forEach((filteredFunction) => {
+      const isDeployment = filteredFunction.name === "createAgent";
       findings.push(
         Finding.fromObject({
           name: isDeployment ? "Nethermind Bot Deployment" : "Nethermind Bot Update",
-          description: `Nethermind ${isDeployment ? "deployed a new" : "updated an existing"} bot with ID: ${event.args.agentId?.toString()}`,
+          description: `Nethermind ${isDeployment ? "deployed a new" : "updated an existing"} bot with ID: ${filteredFunction.args.agentId?.toString()}`,
           alertId: isDeployment ? "NEW-BOT-DEPLOYED" : "EXISTING-BOT-UPDATED",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
           metadata: {
-            agentId: event.args.agentId?.toString(),
+            agentId: filteredFunction.args.agentId?.toString(),
             chainId: chainId,
           },
         })
