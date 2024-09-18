@@ -87,15 +87,19 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
     const findings = await handleTransaction(mockTxEvent);
     findings.push(...(await handleTransaction(mockTxEvent2)));
     expect(findings).toHaveLength(1);
-    expect(findings[0]).toEqual(
-      expect.objectContaining({
+    expect(findings).toStrictEqual([
+      Finding.fromObject({
         name: "Nethermind Bot Deployment",
-        description: `Nethermind deployed a new bot with ID: 1`,
+        description: "Nethermind deployed a new bot with ID: 1",
         alertId: "NEW-BOT-DEPLOYED",
         severity: FindingSeverity.Low,
         type: FindingType.Info,
-      } as Finding)
-    );
+        metadata: {
+          agentId: "1",
+          chainId: "137",
+        },
+      }),
+    ]);
   });
 
   it("7. detects bot update", async () => {
@@ -103,14 +107,18 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
     const findings = await handleTransaction(mockTxEvent);
     findings.push(...(await handleTransaction(mockTxEvent2)));
     expect(findings).toHaveLength(1);
-    expect(findings[0]).toEqual(
-      expect.objectContaining({
+    expect(findings).toStrictEqual([
+      Finding.fromObject({
         name: "Nethermind Bot Update",
-        description: `Nethermind updated an existing bot with ID: 1`,
+        description: "Nethermind updated an existing bot with ID: 1",
         alertId: "EXISTING-BOT-UPDATED",
         severity: FindingSeverity.Low,
         type: FindingType.Info,
-      } as Finding)
-    );
+        metadata: {
+          agentId: "1",
+          chainId: "137",
+        },
+      }),
+    ]);
   });
 });
