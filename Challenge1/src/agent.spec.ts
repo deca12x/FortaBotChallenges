@@ -22,6 +22,10 @@ const encodedUpdateAgentData = ifaceForSetData.encodeFunctionData("updateAgent",
 ]);
 const encodedOtherFunctionData = ifaceForSetData.encodeFunctionData("isRegistered", [MOCK_AGENT_ID]);
 
+// Second transaction for tests 6 and 7, to test if bot picks up only the relevant function
+const mockTxEvent2 = new TestTransactionEvent();
+mockTxEvent2.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedOtherFunctionData);
+
 describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
   let handleTransaction: HandleTransaction;
   let mockTxEvent = new TestTransactionEvent();
@@ -81,12 +85,7 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
     // .setBlock(56681086);
 
     const findings = await handleTransaction(mockTxEvent);
-
-    // Second transaction to test if bot picks up only the createAgent function
-    const mockTxEvent2 = new TestTransactionEvent();
-    mockTxEvent2.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedOtherFunctionData);
     findings.push(...(await handleTransaction(mockTxEvent2)));
-
     expect(findings).toHaveLength(1);
     expect(findings[0]).toEqual(
       expect.objectContaining({
@@ -102,6 +101,7 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
   it("7. detects bot update", async () => {
     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedUpdateAgentData);
     const findings = await handleTransaction(mockTxEvent);
+    findings.push(...(await handleTransaction(mockTxEvent2)));
     expect(findings).toHaveLength(1);
     expect(findings[0]).toEqual(
       expect.objectContaining({
