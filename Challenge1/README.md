@@ -25,6 +25,7 @@ A detection bot that detects Forta bots created and deployed by Nethermind.
 - **Type**: Info
 - **Metadata**:
   - `agentId` (string)
+  - `chainId` (string)
 
 ## Test Data
 

@@ -2,11 +2,13 @@ import { Finding, HandleTransaction, FindingSeverity, FindingType, TransactionEv
 import { createAddress } from "forta-agent-tools";
 import { TestTransactionEvent } from "forta-agent-tools/lib/test";
 import { provideHandleTransaction } from "./agent";
-import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, OTHER_FUNCTION_ABI, CHAIN_IDS, MOCK_AGENT_ID } from "./constants";
+import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, OTHER_FUNCTION_ABI, CHAIN_IDS } from "./constants";
 
 const mockNethermindAddress = createAddress("0x01");
 const mockFortaRegistryAddress = createAddress("0x02");
 const mockOtherAddress = createAddress("0x03");
+
+const MOCK_AGENT_ID = 1;
 
 const ifaceForSetData = new ethers.utils.Interface([CREATE_AGENT_ABI, UPDATE_AGENT_ABI, OTHER_FUNCTION_ABI]);
 const encodedCreateAgentData = ifaceForSetData.encodeFunctionData("createAgent", [
@@ -43,37 +45,37 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
     mockTxEvent = new TestTransactionEvent();
   });
 
-  it("1. returns empty findings if not from Nethermind address", async () => {
+  it("returns empty findings if not from Nethermind address", async () => {
     mockTxEvent.setFrom(mockOtherAddress).setTo(mockFortaRegistryAddress).setData(encodedCreateAgentData);
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toHaveLength(0);
   });
 
-  it("2. returns empty findings if not to Forta Registry", async () => {
+  it("returns empty findings if not to Forta Registry", async () => {
     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedCreateAgentData);
     const findings = await handleTransaction(mockTxEvent);
-    expect(findings).toHaveLength(0);
+    expect(findings).toStrictEqual([]);
   });
 
-  it("3. returns empty findings if neither createAgent nor updateAgent are detected", async () => {
+  it("returns empty findings if neither createAgent nor updateAgent are detected", async () => {
     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedOtherFunctionData);
     const findings = await handleTransaction(mockTxEvent);
-    expect(findings).toHaveLength(0);
+    expect(findings).toStrictEqual([]);
   });
 
-  it("4. returns empty findings if transaction calls createAgent but in wrong contract", async () => {
+  it("returns empty findings if transaction calls createAgent but in wrong contract", async () => {
     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedCreateAgentData);
     const findings = await handleTransaction(mockTxEvent);
-    expect(findings).toHaveLength(0);
+    expect(findings).toStrictEqual([]);
   });
 
-  it("5. returns empty findings if transaction calls updateAgent but in wrong contract", async () => {
+  it("returns empty findings if transaction calls updateAgent but in wrong contract", async () => {
     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedUpdateAgentData);
     const findings = await handleTransaction(mockTxEvent);
-    expect(findings).toHaveLength(0);
+    expect(findings).toStrictEqual([]);
   });
 
-  it("6. detects bot deployment", async () => {
+  it("detects bot deployment", async () => {
     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedCreateAgentData);
 
     // .addTraces({
@@ -103,7 +105,7 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
     ]);
   });
 
-  it("7. detects bot update", async () => {
+  it("detects bot update", async () => {
     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedUpdateAgentData);
     const findings = await handleTransaction(mockTxEvent);
     findings.push(...(await handleTransaction(mockTxEvent2)));

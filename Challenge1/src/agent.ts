@@ -1,4 +1,5 @@
 import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent } from "forta-agent";
+import { TransactionDescription } from "../node_modules/forta-agent/dist/sdk/transaction.event";
 import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS, CHAIN_IDS } from "./constants";
 
 export function provideHandleTransaction(
@@ -11,12 +12,15 @@ export function provideHandleTransaction(
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
 
-    if (txEvent.from.toLowerCase() !== nethermindAddress.toLowerCase()) return findings;
-    if (txEvent.to?.toLowerCase() !== fortaRegistryAddress.toLowerCase()) return findings;
+    if (
+      txEvent.from.toLowerCase() !== nethermindAddress.toLowerCase() ||
+      txEvent.to?.toLowerCase() !== fortaRegistryAddress.toLowerCase()
+    )
+      return findings;
 
     const filteredFunctions = txEvent.filterFunction([createAgentAbi, updateAgentAbi], fortaRegistryAddress);
 
-    filteredFunctions.forEach((filteredFunction) => {
+    filteredFunctions.forEach((filteredFunction: TransactionDescription) => {
       const isDeployment = filteredFunction.name === "createAgent";
       findings.push(
         Finding.fromObject({
@@ -36,10 +40,6 @@ export function provideHandleTransaction(
     return findings;
   };
 }
-
-// export const provideInitialize = () => async () => {
-//   // Initialization logic if needed
-// };
 
 export default {
   handleTransaction: provideHandleTransaction(
