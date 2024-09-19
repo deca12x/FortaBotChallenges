@@ -9,6 +9,7 @@ export const CHAIN_IDS = [137];
 
 export const UNI_SWAP_EVENT_ABI =
   "event Swap (address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)";
+
 export const UNI_POOL_FUNCTIONS_ABI = [
   "function token0() external view returns (address)",
   "function token1() external view returns (address)",

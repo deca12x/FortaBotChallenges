@@ -8,24 +8,34 @@ import {
   ethers,
 } from "forta-agent";
 import { Provider } from "@ethersproject/providers";
-import { UNI_SWAP_EVENT_ABI, UNI_POOL_FUNCTIONS_ABI, UNI_FACTORY_ADDRESS, UNI_INIT_CODE_HASH } from "./constants";
+import {
+  UNI_SWAP_EVENT_ABI,
+  UNI_POOL_FUNCTIONS_ABI,
+  UNI_FACTORY_ADDRESS,
+  UNI_INIT_CODE_HASH,
+  CHAIN_IDS,
+} from "./constants";
 
 export function provideHandleTransaction(
   uniFactoryAddress: string,
   uniInitCode: string,
   uniSwapEventAbi: string,
-  provider: Provider
+  uniPoolFunctionsAbi: string[],
+  provider: Provider,
+  chainId: string
 ): HandleTransaction {
   return async (txEvent: TransactionEvent) => {
+    console.log("0000000000");
     const findings: Finding[] = [];
 
     // todo: if none of txEvent.addresses match the pool addresses in the LRU cache, return
-
+    console.log("1111111111");
     const filteredLogs = txEvent.filterLog(uniSwapEventAbi);
+    console.log("2222222222");
 
     for (const filteredLog of filteredLogs) {
-      const interceptedPoolAddress = filteredLog.address;
-      const interceptedPoolContract = new ethers.Contract(interceptedPoolAddress, uniSwapEventAbi, provider);
+      const { sender, recipient, amount0, amount1 } = filteredLog.args;
+      const interceptedPoolContract = new ethers.Contract(recipient, uniPoolFunctionsAbi, provider);
       const interceptedPoolValues: any[] = await Promise.all([
         interceptedPoolContract.token0({ blockTag: txEvent.blockNumber }),
         interceptedPoolContract.token1({ blockTag: txEvent.blockNumber }),
@@ -37,24 +47,27 @@ export function provideHandleTransaction(
       );
       const interceptedSalt = ethers.utils.solidityKeccak256(["bytes"], [interceptedPoolValuesBytes]);
       const realPoolAddress = ethers.utils.getCreate2Address(uniFactoryAddress, interceptedSalt, uniInitCode);
-      const isUniPool = realPoolAddress.toLowerCase() === interceptedPoolAddress.toLowerCase();
-      if (!isUniPool) return findings;
+      const isRealPool = realPoolAddress.toLowerCase() === recipient.toLowerCase();
+      if (!isRealPool) return findings;
 
-      // findings.push(
-      //   Finding.fromObject({
-      //     name: isDeployment ? "Nethermind Bot Deployment" : "Nethermind Bot Update",
-      //     description: `Nethermind ${
-      //       isDeployment ? "deployed a new" : "updated an existing"
-      //     } bot with ID: ${event.args.agentId?.toString()}`,
-      //     alertId: isDeployment ? "NEW-BOT-DEPLOYED" : "EXISTING-BOT-UPDATED",
-      //     severity: FindingSeverity.Low,
-      //     type: FindingType.Info,
-      //     metadata: {
-      //       agentId: event.args.agentId?.toString(),
-      //       chainId: "137",
-      //     },
-      //   })
-      // );
+      findings.push(
+        Finding.fromObject({
+          name: "Uniswap V3 Swap Detected",
+          description: `Address: ${sender} swapped ${amount0} ${interceptedPoolValues[0]} for ${amount1} ${interceptedPoolValues[1]}, using pool: ${realPoolAddress}`,
+          alertId: "UNISWAPV3-SWAP-DETECTED",
+          severity: FindingSeverity.Info,
+          type: FindingType.Info,
+          metadata: {
+            agentId: filteredLog.args.agentId?.toString(),
+            chainId,
+            poolAddress: realPoolAddress.toLowerCase(),
+            sender,
+            recipient,
+            amount0: amount0.toString(),
+            amount1: amount1.toString(),
+          },
+        })
+      );
     }
 
     return findings;
@@ -62,5 +75,12 @@ export function provideHandleTransaction(
 }
 
 export default {
-  handleTransaction: provideHandleTransaction(UNI_FACTORY_ADDRESS, UNI_SWAP_EVENT_ABI, getEthersProvider()),
+  handleTransaction: provideHandleTransaction(
+    UNI_FACTORY_ADDRESS,
+    UNI_INIT_CODE_HASH,
+    UNI_SWAP_EVENT_ABI,
+    UNI_POOL_FUNCTIONS_ABI,
+    getEthersProvider(),
+    CHAIN_IDS[0].toString()
+  ),
 };
