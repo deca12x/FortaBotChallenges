@@ -45,7 +45,11 @@ export function provideHandleTransaction(
 
     for (const filteredLog of filteredLogs) {
       const { sender, recipient, amount0, amount1 } = filteredLog.args;
-      const interceptedPoolContract = new ethers.Contract(recipient, uniPoolFunctionsAbi, provider);
+      const interceptedPoolContract = new ethers.Contract(
+        recipient,
+        uniPoolFunctionsAbi,
+        provider
+      );
       const interceptedPoolValues: any[] = await Promise.all([
         interceptedPoolContract.token0({ blockTag: txEvent.blockNumber }),
         interceptedPoolContract.token1({ blockTag: txEvent.blockNumber }),
@@ -55,9 +59,17 @@ export function provideHandleTransaction(
         ["address", "address", "uint24"],
         interceptedPoolValues
       );
-      const interceptedSalt = ethers.utils.solidityKeccak256(["bytes"], [interceptedPoolValuesBytes]);
-      const realPoolAddress = ethers.utils.getCreate2Address(uniFactoryAddress, interceptedSalt, uniInitCode);
-      const isRealPool = realPoolAddress.toLowerCase() === recipient.toLowerCase();
+      const interceptedSalt = ethers.utils.solidityKeccak256(
+        ["bytes"],
+        [interceptedPoolValuesBytes]
+      );
+      const realPoolAddress = ethers.utils.getCreate2Address(
+        uniFactoryAddress,
+        interceptedSalt,
+        uniInitCode
+      );
+      const isRealPool =
+        realPoolAddress.toLowerCase() === recipient.toLowerCase();
       if (!isRealPool) return findings;
 
       findings.push(
