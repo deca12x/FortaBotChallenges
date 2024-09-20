@@ -1,6 +1,6 @@
 {
   "name": "bot-detection-bot",
-  "displayName": "Nethermind Bot Creation and Update Detection Bot",
+  "displayName": "Bot Creation/Update Detection Bot",
   "version": "0.0.1",
   "description": "This bot detects Forta bots deployed by Nethermind.",
   "longDescription": "This bot monitors the Forta network for deployments and updates of Forta bots initiated by Nethermind. It listens for specific smart contract events related to bot creation and updates, providing alerts when these actions occur. The bot is designed to enhance the visibility of bot activities on the network, ensuring that users are informed about new deployments and updates to existing bots. It operates on the Polygon chain and utilizes the Forta agent framework for efficient monitoring and alerting.",
@@ -33,8 +33,7 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
-    "forta-agent": "^0.1.48",
-    "forta-agent-tools": "^3.2.12"
+    "forta-agent": "^0.1.48"
   },
   "devDependencies": {
     "@types/jest": "^29.5.10",
@@ -43,6 +42,7 @@
     "nodemon": "^2.0.8",
     "prettier": "^3.3.3",
     "ts-jest": "^29.1.1",
-    "typescript": "^4.3.4"
+    "typescript": "^4.3.4",
+    "forta-agent-tools": "^3.2.12"
   }
 }

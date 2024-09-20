@@ -1,5 +1,4 @@
-import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent } from "forta-agent";
-import { TransactionDescription } from "../node_modules/forta-agent/dist/sdk/transaction.event";
+import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent, ethers } from "forta-agent";
 import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS, CHAIN_IDS } from "./constants";
 
 export function provideHandleTransaction(
@@ -20,7 +19,7 @@ export function provideHandleTransaction(
 
     const filteredFunctions = txEvent.filterFunction([createAgentAbi, updateAgentAbi], fortaRegistryAddress);
 
-    filteredFunctions.forEach((filteredFunction: TransactionDescription) => {
+    filteredFunctions.forEach((filteredFunction: ethers.utils.TransactionDescription) => {
       const isDeployment = filteredFunction.name === "createAgent";
       findings.push(
         Finding.fromObject({
