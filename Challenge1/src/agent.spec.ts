@@ -11,7 +11,7 @@ const mockAgentId = 1;
 const mockChainIds = [137];
 const mockCreateAgentAbi = "function createAgent(uint256 agentId,address ,string metadata,uint256[] chainIds)";
 const mockUpdateAgentAbi = "function updateAgent(uint256 agentId,string metadata,uint256[] chainIds)";
-const otherFunctionAbi = "function isRegistered(uint256 agentId) returns (bool)";
+const otherFunctionAbi = "function isRegistered(uint256 agentId)";
 
 const ifaceForSetData = new ethers.utils.Interface([mockCreateAgentAbi, mockUpdateAgentAbi, otherFunctionAbi]);
 const encodedCreateAgentData = ifaceForSetData.encodeFunctionData("createAgent", [
@@ -112,7 +112,21 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
   });
 
   it("detects bot update", async () => {
-    mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedUpdateAgentData);
+    mockTxEvent
+      .setFrom(mockNethermindAddress)
+      .setTo(mockFortaRegistryAddress)
+      .addTraces({
+        from: mockNethermindAddress,
+        to: mockFortaRegistryAddress,
+        function: mockUpdateAgentAbi,
+        arguments: [mockAgentId, "metadata", mockChainIds],
+      })
+      .addTraces({
+        from: mockNethermindAddress,
+        to: mockFortaRegistryAddress,
+        function: otherFunctionAbi,
+        arguments: [mockAgentId],
+      });
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toHaveLength(1);
     expect(findings).toStrictEqual([
