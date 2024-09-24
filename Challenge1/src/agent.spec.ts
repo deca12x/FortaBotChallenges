@@ -51,7 +51,7 @@ describe("Nethermind Bot Creation and Update Detection Bot Test Suite", () => {
   });
 
   it("returns empty findings if not to Forta Registry", async () => {
-    mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedCreateAgentData);
+    mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedOtherFunctionData);
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([]);
   });
