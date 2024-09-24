@@ -1,78 +1,51 @@
-import {
-  BlockEvent,
-  Finding,
-  Initialize,
-  HandleBlock,
-  HealthCheck,
-  HandleTransaction,
-  HandleAlert,
-  AlertEvent,
-  TransactionEvent,
-  FindingSeverity,
-  FindingType,
-} from "forta-agent";
+import { Finding, FindingSeverity, FindingType, HandleTransaction, TransactionEvent, ethers } from "forta-agent";
+import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, NETHERMIND_ADDRESS, FORTA_REGISTRY_ADDRESS, CHAIN_IDS } from "./constants";
 
-export const BOT_DEPLOYMENT_FUNCTION =
-  "function createAgent(uint256 agentId,address ,string metadata,uint256[] chainIds)";
-const NETHERMIND_ADDRESS = "0x88dC3a2284FA62e0027d6D6B1fCfDd2141a143b8".toLowerCase();
-const FORTA_REGISTRY_ADDRESS = "0x61447385B019187daa48e91c55c02AF1F1f3F863";
-let findingsCount = 0;
+export function provideHandleTransaction(
+  createAgentAbi: string,
+  updateAgentAbi: string,
+  nethermindAddress: string,
+  fortaRegistryAddress: string,
+  chainId: string
+): HandleTransaction {
+  return async (txEvent: TransactionEvent) => {
+    const findings: Finding[] = [];
 
-const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) => {
-  const findings: Finding[] = [];
+    if (
+      txEvent.from.toLowerCase() !== nethermindAddress.toLowerCase() ||
+      txEvent.to?.toLowerCase() !== fortaRegistryAddress.toLowerCase()
+    )
+      return findings;
 
-  // limiting this agent to emit only 5 findings so that the alert feed is not spammed
-  if (findingsCount >= 5) return findings;
-  // only run this agent on the Nethermind address
-  if (txEvent.from !== NETHERMIND_ADDRESS) return findings;
+    const filteredFunctions = txEvent.filterFunction([createAgentAbi, updateAgentAbi], fortaRegistryAddress);
 
-  const callsToCreateAgent = txEvent.filterFunction(BOT_DEPLOYMENT_FUNCTION, FORTA_REGISTRY_ADDRESS);
+    filteredFunctions.forEach((filteredFunction: ethers.utils.TransactionDescription) => {
+      const isDeployment = filteredFunction.name === "createAgent";
+      findings.push(
+        Finding.fromObject({
+          name: isDeployment ? "Nethermind Bot Deployment" : "Nethermind Bot Update",
+          description: `Nethermind ${isDeployment ? "deployed a new" : "updated an existing"} bot with ID: ${filteredFunction.args.agentId?.toString()}`,
+          alertId: isDeployment ? "NEW-BOT-DEPLOYED" : "EXISTING-BOT-UPDATED",
+          severity: FindingSeverity.Low,
+          type: FindingType.Info,
+          metadata: {
+            agentId: filteredFunction.args.agentId?.toString(),
+            chainId: chainId,
+          },
+        })
+      );
+    });
 
-  callsToCreateAgent.forEach((call) => {
-    findings.push(
-      Finding.fromObject({
-        name: "Nethermind Bot Deployment",
-        description: `Nethermind deployed a new bot with ID: ${call.args.agentId}`,
-        alertId: "NEW-BOT-DEPLOYED",
-        severity: FindingSeverity.Low,
-        type: FindingType.Info,
-        metadata: {
-          agentId: call.args.agentId,
-        },
-      })
-    );
-    findingsCount++;
-  });
-  return findings;
-};
-
-// const initialize: Initialize = async () => {
-//   // do some initialization on startup e.g. fetch data
-// }
-
-// const handleBlock: HandleBlock = async (blockEvent: BlockEvent) => {
-//   const findings: Finding[] = [];
-//   // detect some block condition
-//   return findings;
-// }
-
-// const handleAlert: HandleAlert = async (alertEvent: AlertEvent) => {
-//   const findings: Finding[] = [];
-//   // detect some alert condition
-//   return findings;
-// }
-
-// const healthCheck: HealthCheck = async () => {
-//   const errors: string[] = [];
-// detect some health check condition
-// errors.push("not healthy due to some condition")
-// return errors;
-// }
+    return findings;
+  };
+}
 
 export default {
-  // initialize,
-  handleTransaction,
-  // healthCheck,
-  // handleBlock,
-  // handleAlert
+  handleTransaction: provideHandleTransaction(
+    CREATE_AGENT_ABI,
+    UPDATE_AGENT_ABI,
+    NETHERMIND_ADDRESS,
+    FORTA_REGISTRY_ADDRESS,
+    CHAIN_IDS[0].toString()
+  ),
 };
