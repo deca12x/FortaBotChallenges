@@ -8,7 +8,7 @@ import {
   ethers,
 } from "forta-agent";
 import { Provider } from "@ethersproject/providers";
-// import { LRUCache } from "lru-cache";
+import { LRUCache } from "lru-cache";
 import {
   UNI_SWAP_EVENT_ABI,
   UNI_POOL_FUNCTIONS_ABI,
@@ -17,25 +17,25 @@ import {
   CHAIN_IDS,
 } from "./constants";
 
-// const addressIsUniCache = new LRUCache<string, boolean>({ max: 10000 });
+const addressIsUniCache = new LRUCache<string, boolean>({ max: 100000 });
 
 const getPoolValues = async (
   provider: Provider,
   uniPoolFunctionsAbi: string[],
-  interceptedPoolAddress: string,
+  poolAddress: string,
   txEvent: TransactionEvent
 ) => {
-  const interceptedPoolContract = new ethers.Contract(
-    interceptedPoolAddress,
+  const poolContract = new ethers.Contract(
+    poolAddress,
     uniPoolFunctionsAbi,
     provider
   );
-  const interceptedPoolValues: any[] = await Promise.all([
-    interceptedPoolContract.token0({ blockTag: txEvent.blockNumber }),
-    interceptedPoolContract.token1({ blockTag: txEvent.blockNumber }),
-    interceptedPoolContract.fee({ blockTag: txEvent.blockNumber }),
+  const poolValues: any[] = await Promise.all([
+    poolContract.token0({ blockTag: txEvent.blockNumber }),
+    poolContract.token1({ blockTag: txEvent.blockNumber }),
+    poolContract.fee({ blockTag: txEvent.blockNumber }),
   ]);
-  return interceptedPoolValues;
+  return poolValues;
 };
 
 const isRealPool = async (
@@ -72,16 +72,13 @@ export function provideHandleTransaction(
 ): HandleTransaction {
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
-
-    // todo: if none of txEvent.addresses match the pool addresses in the LRU cache, return
-
     const filteredLogs = txEvent.filterLog(uniSwapEventAbi);
 
     for (const filteredLog of filteredLogs) {
       const interceptedPoolAddress = filteredLog.address;
-      // const isPoolInCache = addressIsUniCache.get(interceptedPoolAddress);
+      const isPoolInCache = addressIsUniCache.get(interceptedPoolAddress);
 
-      // if (isPoolInCache === false) return findings;
+      if (isPoolInCache === false) return findings; // if was in cache and not a real pool, return
 
       const interceptedPoolValues = await getPoolValues(
         provider,
@@ -90,16 +87,19 @@ export function provideHandleTransaction(
         txEvent
       );
 
-      const isRealPoolBool: boolean = await isRealPool(
-        uniFactoryAddress,
-        uniInitCode,
-        interceptedPoolAddress,
-        interceptedPoolValues
-      );
+      if (isPoolInCache === undefined) {
+        // if wan't in cache, check if it's a real pool
+        const isRealPoolBool: boolean = await isRealPool(
+          uniFactoryAddress,
+          uniInitCode,
+          interceptedPoolAddress,
+          interceptedPoolValues
+        );
+        addressIsUniCache.set(interceptedPoolAddress, isRealPoolBool); // now it's in cache
+        if (!isRealPoolBool) return findings; // if not a real pool, return
+      }
 
-      // addressIsUniCache.set(interceptedPoolAddress, isRealPool);
-
-      if (!isRealPoolBool) return findings;
+      // remaining scenarios are: pool was in cache and is a real pool, or wan't in cache (but now it is) and is a real pool
 
       const { sender, amount0, amount1, agentId } = filteredLog.args;
 
