@@ -33,7 +33,6 @@ export function provideHandleTransaction(
 
     for (const filteredLog of filteredLogs) {
       const interceptedPoolAddress = filteredLog.address;
-      const { sender, amount0, amount1 } = filteredLog.args;
       const interceptedPoolContract = new ethers.Contract(
         interceptedPoolAddress,
         uniPoolFunctionsAbi,
@@ -60,6 +59,8 @@ export function provideHandleTransaction(
       const isRealPool =
         realPoolAddress.toLowerCase() === interceptedPoolAddress.toLowerCase();
       if (!isRealPool) return findings;
+
+      const { sender, amount0, amount1 } = filteredLog.args;
 
       findings.push(
         Finding.fromObject({

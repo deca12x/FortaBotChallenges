@@ -8,7 +8,7 @@
   "licenseUrl": "https://github.com/forta-network/forta-bot-sdk/blob/master/starter-project/LICENSE.md",
   "promoUrl": "https://forta.org",
   "chainIds": [
-    137
+    1
   ],
   "scripts": {
     "build": "tsc",
@@ -32,7 +32,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "forta-agent": "^0.1.48"
+    "forta-agent": "^0.1.48",
+    "quick-lru": "^7.0.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.10",

@@ -1,4 +1,4 @@
-export const CHAIN_IDS = [137];
+export const CHAIN_IDS = [1];
 // export const MOCK_AGENT_ID = 1;
 
 export const UNI_SWAP_EVENT_ABI =
