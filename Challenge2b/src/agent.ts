@@ -16,16 +16,6 @@ import {
   CHAIN_IDS,
 } from "./constants";
 
-// export function provideHandleTransaction(): HandleTransaction {
-//   return async (txEvent: TransactionEvent) => {
-//     console.log("0000000000");
-//     const findings: Finding[] = [];
-//     return findings;
-//   };
-// }
-
-// export default { handleTransaction: provideHandleTransaction() };
-
 export function provideHandleTransaction(
   uniFactoryAddress: string,
   uniInitCode: string,
@@ -34,19 +24,18 @@ export function provideHandleTransaction(
   provider: Provider,
   chainId: string
 ): HandleTransaction {
-  console.log("provideHandleTransaction");
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
 
     // todo: if none of txEvent.addresses match the pool addresses in the LRU cache, return
 
     const filteredLogs = txEvent.filterLog(uniSwapEventAbi);
-    console.log(filteredLogs);
 
     for (const filteredLog of filteredLogs) {
-      const { sender, recipient, amount0, amount1 } = filteredLog.args;
+      const interceptedPoolAddress = filteredLog.address;
+      const { sender, amount0, amount1 } = filteredLog.args;
       const interceptedPoolContract = new ethers.Contract(
-        recipient,
+        interceptedPoolAddress,
         uniPoolFunctionsAbi,
         provider
       );
@@ -69,7 +58,7 @@ export function provideHandleTransaction(
         uniInitCode
       );
       const isRealPool =
-        realPoolAddress.toLowerCase() === recipient.toLowerCase();
+        realPoolAddress.toLowerCase() === interceptedPoolAddress.toLowerCase();
       if (!isRealPool) return findings;
 
       findings.push(
@@ -84,7 +73,7 @@ export function provideHandleTransaction(
             chainId,
             poolAddress: realPoolAddress.toLowerCase(),
             sender,
-            recipient,
+            interceptedPoolAddress,
             amount0: amount0.toString(),
             amount1: amount1.toString(),
           },
