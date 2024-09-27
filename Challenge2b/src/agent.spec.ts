@@ -1,74 +1,74 @@
 // import {
-//   FindingType,
-//   FindingSeverity,
 //   Finding,
+//   FindingSeverity,
+//   FindingType,
 //   HandleTransaction,
-//   createTransactionEvent,
 //   ethers,
 // } from "forta-agent";
-// import agent, {
-//   ERC20_TRANSFER_EVENT,
-//   TETHER_ADDRESS,
-//   TETHER_DECIMALS,
-// } from "./agent";
+// import { createAddress } from "forta-agent-tools";
+// import {
+//   TestTransactionEvent,
+//   MockEthersProvider,
+// } from "forta-agent-tools/lib/test";
+// import { provideHandleTransaction } from "./agent";
+// import {
+//   UNI_SWAP_EVENT_ABI,
+//   UNI_POOL_FUNCTIONS_ABI,
+//   CHAIN_IDS,
+// } from "./constants";
+// import { isRealPool } from "./agent";
 
-// describe("high tether transfer agent", () => {
+// const mockFactoryAddress = createAddress("0x01");
+// const mockInitCodeHash = "0x02";
+// const mockToken0 = createAddress("0x03");
+// const mockToken1 = createAddress("0x04");
+// const mockFee = 2;
+// const mockPoolValues = [mockToken0, mockToken1, mockFee];
+
+// describe("Uni V3 Swap Detector Test Suite", () => {
 //   let handleTransaction: HandleTransaction;
-//   const mockTxEvent = createTransactionEvent({} as any);
-
+//   let mockTxEvent = new TestTransactionEvent();
 //   beforeAll(() => {
-//     handleTransaction = agent.handleTransaction;
+//     const mockProvider = new MockEthersProvider();
+
+//     handleTransaction = provideHandleTransaction(
+//       mockFactoryAddress,
+//       mockInitCodeHash,
+//       UNI_SWAP_EVENT_ABI,
+//       UNI_POOL_FUNCTIONS_ABI,
+//       getEthersProvider(),
+//       CHAIN_IDS[0].toString()
+//     );
 //   });
 
-//   describe("handleTransaction", () => {
-//     it("returns empty findings if there are no Tether transfers", async () => {
-//       mockTxEvent.filterLog = jest.fn().mockReturnValue([]);
+//   beforeEach(() => {});
 
-//       const findings = await handleTransaction(mockTxEvent);
-
-//       expect(findings).toStrictEqual([]);
-//       expect(mockTxEvent.filterLog).toHaveBeenCalledTimes(1);
-//       expect(mockTxEvent.filterLog).toHaveBeenCalledWith(
-//         ERC20_TRANSFER_EVENT,
-//         TETHER_ADDRESS
-//       );
+//   const configMockChainFrozenState = (contractAddress: string) => {
+//     mockProvider.addCallTo(contractAddress, 0, Iface, "token0", {
+//       inputs: [],
+//       outputs: [mockToken0],
+//     });
+//     mockProvider.addCallTo(contractAddress, 0, Iface, "token1", {
+//       inputs: [],
+//       outputs: [mockToken1],
+//     });
+//     mockProvider.addCallTo(contractAddress, 0, Iface, "fee", {
+//       inputs: [],
+//       outputs: [mockFee],
 //     });
 
-//     it("returns a finding if there is a Tether transfer over 10,000", async () => {
-//       const mockTetherTransferEvent = {
-//         args: {
-//           from: "0xabc",
-//           to: "0xdef",
-//           value: ethers.BigNumber.from("20000000000"), //20k with 6 decimals
-//         },
-//       };
-//       mockTxEvent.filterLog = jest
-//         .fn()
-//         .mockReturnValue([mockTetherTransferEvent]);
+//     mockProvider.setLatestBlock(0);
+//   };
 
-//       const findings = await handleTransaction(mockTxEvent);
+//   // const configProvider
 
-//       const normalizedValue = mockTetherTransferEvent.args.value.div(
-//         10 ** TETHER_DECIMALS
-//       );
-//       expect(findings).toStrictEqual([
-//         Finding.fromObject({
-//           name: "High Tether Transfer",
-//           description: `High amount of USDT transferred: ${normalizedValue}`,
-//           alertId: "FORTA-1",
-//           severity: FindingSeverity.Low,
-//           type: FindingType.Info,
-//           metadata: {
-//             to: mockTetherTransferEvent.args.to,
-//             from: mockTetherTransferEvent.args.from,
-//           },
-//         }),
-//       ]);
-//       expect(mockTxEvent.filterLog).toHaveBeenCalledTimes(1);
-//       expect(mockTxEvent.filterLog).toHaveBeenCalledWith(
-//         ERC20_TRANSFER_EVENT,
-//         TETHER_ADDRESS
-//       );
-//     });
-//   });
+//   it("ignores transactions that don't emit a Swap Event and are not to an official Uni V3 Pool", async () => {});
+
+//   it("ignores transactions that emit a Swap Event but are not to an official Uni V3 Pool", async () => {});
+
+//   it("ignores transactions that are to an official Uni V3 Pool but don't emit a Swap Event", async () => {});
+
+//   it("successfully detects an official swap, returning 1 finding", async () => {});
+
+//   it("successfully detects multiple swaps in a txEvent, returning multiple findings", async () => {});
 // });

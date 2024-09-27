@@ -14,7 +14,6 @@ import {
   UNI_POOL_FUNCTIONS_ABI,
   UNI_FACTORY_ADDRESS,
   UNI_INIT_CODE_HASH,
-  CHAIN_IDS,
 } from "./constants";
 
 const addressIsUniCache = new LRUCache<string, boolean>({ max: 100000 });
@@ -38,7 +37,7 @@ const getPoolValues = async (
   return poolValues;
 };
 
-const isRealPool = async (
+export const isRealPool = async (
   uniFactoryAddress: string,
   uniInitCode: string,
   interceptedPoolAddress: string,
@@ -67,8 +66,7 @@ export function provideHandleTransaction(
   uniInitCode: string,
   uniSwapEventAbi: string,
   uniPoolFunctionsAbi: string[],
-  provider: Provider,
-  chainId: string
+  provider: Provider
 ): HandleTransaction {
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
@@ -112,7 +110,6 @@ export function provideHandleTransaction(
           type: FindingType.Info,
           metadata: {
             agentId: agentId?.toString(),
-            chainId,
             poolAddress: interceptedPoolAddress.toLowerCase(),
             sender,
             interceptedPoolAddress,
@@ -133,7 +130,6 @@ export default {
     UNI_INIT_CODE_HASH,
     UNI_SWAP_EVENT_ABI,
     UNI_POOL_FUNCTIONS_ABI,
-    getEthersProvider(),
-    CHAIN_IDS[0].toString()
+    getEthersProvider()
   ),
 };
