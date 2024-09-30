@@ -37,10 +37,9 @@ const getPoolValues = async (
   return poolValues;
 };
 
-export const isRealPool = async (
+export const getRealPoolAddress = async (
   uniFactoryAddress: string,
   uniInitCode: string,
-  interceptedPoolAddress: string,
   interceptedPoolValues: any[]
 ) => {
   const interceptedPoolValuesBytes = ethers.utils.defaultAbiCoder.encode(
@@ -56,9 +55,7 @@ export const isRealPool = async (
     interceptedSalt,
     uniInitCode
   );
-  const isRealPool =
-    realPoolAddress.toLowerCase() === interceptedPoolAddress.toLowerCase();
-  return isRealPool;
+  return realPoolAddress;
 };
 
 export function provideHandleTransaction(
@@ -87,14 +84,16 @@ export function provideHandleTransaction(
 
       if (isPoolInCache === undefined) {
         // if wan't in cache, check if it's a real pool
-        const isRealPoolBool: boolean = await isRealPool(
+        const realPoolAddress: string = await getRealPoolAddress(
           uniFactoryAddress,
           uniInitCode,
-          interceptedPoolAddress,
           interceptedPoolValues
         );
-        addressIsUniCache.set(interceptedPoolAddress, isRealPoolBool); // now it's in cache
-        if (!isRealPoolBool) return findings; // if not a real pool, return
+        const isRealPool =
+          realPoolAddress.toLowerCase() ===
+          interceptedPoolAddress.toLowerCase();
+        addressIsUniCache.set(interceptedPoolAddress, isRealPool); // now it's in cache
+        if (!isRealPool) return findings; // if not a real pool, return
       }
 
       // remaining scenarios are: pool was in cache and is a real pool, or wan't in cache (but now it is) and is a real pool
