@@ -108,7 +108,6 @@ export function provideHandleTransaction(
           severity: FindingSeverity.Info,
           type: FindingType.Info,
           metadata: {
-            agentId: agentId?.toString(),
             poolAddress: interceptedPoolAddress.toLowerCase(),
             sender,
             interceptedPoolAddress,
