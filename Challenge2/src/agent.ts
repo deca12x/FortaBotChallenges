@@ -8,71 +8,109 @@ import {
   ethers,
 } from "forta-agent";
 import { Provider } from "@ethersproject/providers";
+import { LRUCache } from "lru-cache";
 import {
   UNI_SWAP_EVENT_ABI,
   UNI_POOL_FUNCTIONS_ABI,
   UNI_FACTORY_ADDRESS,
   UNI_INIT_CODE_HASH,
-  CHAIN_IDS,
 } from "./constants";
 
-// export function provideHandleTransaction(): HandleTransaction {
-//   return async (txEvent: TransactionEvent) => {
-//     console.log("0000000000");
-//     const findings: Finding[] = [];
-//     return findings;
-//   };
-// }
+const addressIsUniCache = new LRUCache<string, boolean>({ max: 100000 });
 
-// export default { handleTransaction: provideHandleTransaction() };
+const getPoolValues = async (
+  provider: Provider,
+  uniPoolFunctionsAbi: string[],
+  poolAddress: string,
+  txEvent: TransactionEvent
+) => {
+  const poolContract = new ethers.Contract(
+    poolAddress,
+    uniPoolFunctionsAbi,
+    provider
+  );
+  const poolValues: any[] = await Promise.all([
+    poolContract.token0({ blockTag: txEvent.blockNumber }),
+    poolContract.token1({ blockTag: txEvent.blockNumber }),
+    poolContract.fee({ blockTag: txEvent.blockNumber }),
+  ]);
+  return poolValues;
+};
+
+export const getRealPoolAddress = async (
+  uniFactoryAddress: string,
+  uniInitCode: string,
+  interceptedPoolValues: any[]
+) => {
+  const interceptedPoolValuesBytes = ethers.utils.defaultAbiCoder.encode(
+    ["address", "address", "uint24"],
+    interceptedPoolValues
+  );
+  const interceptedSalt = ethers.utils.solidityKeccak256(
+    ["bytes"],
+    [interceptedPoolValuesBytes]
+  );
+  const realPoolAddress = ethers.utils.getCreate2Address(
+    uniFactoryAddress,
+    interceptedSalt,
+    uniInitCode
+  );
+  return realPoolAddress;
+};
 
 export function provideHandleTransaction(
   uniFactoryAddress: string,
   uniInitCode: string,
   uniSwapEventAbi: string,
   uniPoolFunctionsAbi: string[],
-  provider: Provider,
-  chainId: string
+  provider: Provider
 ): HandleTransaction {
-  console.log("provideHandleTransaction");
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
-
-    // todo: if none of txEvent.addresses match the pool addresses in the LRU cache, return
-
     const filteredLogs = txEvent.filterLog(uniSwapEventAbi);
-    console.log(filteredLogs);
 
     for (const filteredLog of filteredLogs) {
-      const { sender, recipient, amount0, amount1 } = filteredLog.args;
-      const interceptedPoolContract = new ethers.Contract(recipient, uniPoolFunctionsAbi, provider);
-      const interceptedPoolValues: any[] = await Promise.all([
-        interceptedPoolContract.token0({ blockTag: txEvent.blockNumber }),
-        interceptedPoolContract.token1({ blockTag: txEvent.blockNumber }),
-        interceptedPoolContract.fee({ blockTag: txEvent.blockNumber }),
-      ]);
-      const interceptedPoolValuesBytes = ethers.utils.defaultAbiCoder.encode(
-        ["address", "address", "uint24"],
-        interceptedPoolValues
+      const interceptedPoolAddress = filteredLog.address;
+      const isPoolInCache = addressIsUniCache.get(interceptedPoolAddress);
+
+      if (isPoolInCache === false) return findings; // if was in cache and not a real pool, return
+
+      const interceptedPoolValues = await getPoolValues(
+        provider,
+        uniPoolFunctionsAbi,
+        interceptedPoolAddress,
+        txEvent
       );
-      const interceptedSalt = ethers.utils.solidityKeccak256(["bytes"], [interceptedPoolValuesBytes]);
-      const realPoolAddress = ethers.utils.getCreate2Address(uniFactoryAddress, interceptedSalt, uniInitCode);
-      const isRealPool = realPoolAddress.toLowerCase() === recipient.toLowerCase();
-      if (!isRealPool) return findings;
+
+      if (isPoolInCache === undefined) {
+        // if wan't in cache, check if it's a real pool
+        const realPoolAddress: string = await getRealPoolAddress(
+          uniFactoryAddress,
+          uniInitCode,
+          interceptedPoolValues
+        );
+        const isRealPool =
+          realPoolAddress.toLowerCase() ===
+          interceptedPoolAddress.toLowerCase();
+        addressIsUniCache.set(interceptedPoolAddress, isRealPool); // now it's in cache
+        if (!isRealPool) return findings; // if not a real pool, return
+      }
+
+      // remaining scenarios are: pool was in cache and is a real pool, or wan't in cache (but now it is) and is a real pool
+
+      const { sender, amount0, amount1, agentId } = filteredLog.args;
 
       findings.push(
         Finding.fromObject({
           name: "Uniswap V3 Swap Detected",
-          description: `Address: ${sender} swapped ${amount0} ${interceptedPoolValues[0]} for ${amount1} ${interceptedPoolValues[1]}, using pool: ${realPoolAddress}`,
+          description: `Address: ${sender} swapped ${amount0} ${interceptedPoolValues[0]} for ${amount1} ${interceptedPoolValues[1]}, using pool: ${interceptedPoolAddress}`,
           alertId: "UNISWAPV3-SWAP-DETECTED",
           severity: FindingSeverity.Info,
           type: FindingType.Info,
           metadata: {
-            agentId: filteredLog.args.agentId?.toString(),
-            chainId,
-            poolAddress: realPoolAddress.toLowerCase(),
+            poolAddress: interceptedPoolAddress.toLowerCase(),
             sender,
-            recipient,
+            interceptedPoolAddress,
             amount0: amount0.toString(),
             amount1: amount1.toString(),
           },
@@ -90,7 +128,6 @@ export default {
     UNI_INIT_CODE_HASH,
     UNI_SWAP_EVENT_ABI,
     UNI_POOL_FUNCTIONS_ABI,
-    getEthersProvider(),
-    CHAIN_IDS[0].toString()
+    getEthersProvider()
   ),
 };

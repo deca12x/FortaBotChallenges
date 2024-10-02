@@ -29,11 +29,11 @@ jobs:
         run: npm test
 
       - name: Install Challenge 2 dependencies
-        working-directory: ./Challenge2b
+        working-directory: ./Challenge2
         shell: bash
         run: npm install
 
       - name: Run Challenge 2 tests
-        working-directory: ./Challenge2b
+        working-directory: ./Challenge2
         shell: bash
         run: npm test

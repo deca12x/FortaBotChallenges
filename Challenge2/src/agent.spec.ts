@@ -1,151 +1,192 @@
-// import { Finding, HandleTransaction, FindingSeverity, FindingType, TransactionEvent, ethers } from "forta-agent";
-// import { createAddress } from "forta-agent-tools";
-// import { TestTransactionEvent } from "forta-agent-tools/lib/test";
-// import { provideHandleTransaction } from "./agent";
-// import { CREATE_AGENT_ABI, UPDATE_AGENT_ABI, MOCK_CHAIN_IDS, MOCK_AGENT_ID } from "./constants";
+import {
+  Finding,
+  FindingSeverity,
+  FindingType,
+  HandleTransaction,
+  ethers,
+} from "forta-agent";
+import { createAddress } from "forta-agent-tools";
+import {
+  TestTransactionEvent,
+  MockEthersProvider,
+} from "forta-agent-tools/lib/test";
+import { provideHandleTransaction } from "./agent";
+import { UNI_SWAP_EVENT_ABI, UNI_POOL_FUNCTIONS_ABI } from "./constants";
+import { getRealPoolAddress } from "./agent";
 
-// const mockNethermindAddress = createAddress("0x01");
-// const mockFortaRegistryAddress = createAddress("0x02");
-// const mockOtherAddress = createAddress("0x03");
+const mockUniFactoryAddress = createAddress("0x01");
+const mockInitCodeHash =
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
+const mockSender = createAddress("0x03");
+const mockToken0 = createAddress("0x04");
+const mockToken1 = createAddress("0x05");
+const mockFee = 2;
+const mockOtherAddress = createAddress("0x06");
+const mockPoolValues = [mockToken0, mockToken1, mockFee];
+let mockRealPoolAddress: string;
+let mockSwapEventArgs: any[];
 
-// const ifaceForSetData = new ethers.utils.Interface([CREATE_AGENT_ABI, UPDATE_AGENT_ABI]);
-// const encodedCreateAgentData = ifaceForSetData.encodeFunctionData("createAgent", [
-//   MOCK_AGENT_ID,
-//   mockNethermindAddress,
-//   "metadata",
-//   MOCK_CHAIN_IDS,
-// ]);
-// const encodedUpdateAgentData = ifaceForSetData.encodeFunctionData("updateAgent", [
-//   MOCK_AGENT_ID,
-//   "metadata",
-//   MOCK_CHAIN_IDS,
-// ]);
+let mockProvider = new MockEthersProvider();
+const provider = mockProvider as unknown as ethers.providers.Provider;
+let uniPoolFunctionsInterface = new ethers.utils.Interface(
+  UNI_POOL_FUNCTIONS_ABI
+);
 
-// describe("Detection of bot deployments and updates, only by Nethermind, only to Forta Registry.", () => {
-//   let handleTransaction: HandleTransaction;
-//   let mockTxEvent = new TestTransactionEvent();
-//   beforeAll(() => {
-//     handleTransaction = provideHandleTransaction(
-//       CREATE_AGENT_ABI,
-//       UPDATE_AGENT_ABI,
-//       mockNethermindAddress,
-//       mockFortaRegistryAddress
-//     );
-//   });
+const handleTransaction: HandleTransaction = provideHandleTransaction(
+  mockUniFactoryAddress,
+  mockInitCodeHash,
+  UNI_SWAP_EVENT_ABI,
+  UNI_POOL_FUNCTIONS_ABI,
+  provider
+);
 
-//   beforeEach(() => {
-//     mockTxEvent = new TestTransactionEvent();
-//   });
+// We're not really configuring the provider, we're configuring the state of the mock chain and the calls that are available to our contract
+const configMockProvider = (poolAddress: string) => {
+  mockProvider.addCallTo(poolAddress, 0, uniPoolFunctionsInterface, "token0", {
+    inputs: [],
+    outputs: [mockToken0],
+  });
+  mockProvider.addCallTo(poolAddress, 0, uniPoolFunctionsInterface, "token1", {
+    inputs: [],
+    outputs: [mockToken1],
+  });
+  mockProvider.addCallTo(poolAddress, 0, uniPoolFunctionsInterface, "fee", {
+    inputs: [],
+    outputs: [mockFee],
+  });
+  mockProvider.setLatestBlock(0);
+};
 
-//   it("1. returns empty findings if not from Nethermind address", async () => {
-//     mockTxEvent.setFrom(mockOtherAddress).setTo(mockFortaRegistryAddress).setData(encodedCreateAgentData);
+describe("Uni V3 Swap Detector Test Suite", () => {
+  beforeAll(async () => {
+    mockRealPoolAddress = (
+      await getRealPoolAddress(
+        mockUniFactoryAddress,
+        mockInitCodeHash,
+        mockPoolValues
+      )
+    ).toLowerCase();
 
-//     // .addTraces({
-//     //   from: mockNethermindAddress,
-//     //   to: mockFortaRegistryAddress,
-//     //   function: CREATE_AGENT_ABI,
-//     //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
-//     // });
+    mockSwapEventArgs = [
+      mockSender,
+      mockRealPoolAddress,
+      ethers.BigNumber.from("-1000000000000000000"), // mock amount0 in wei (assume 18 decimals), so essentially this is -1
+      ethers.BigNumber.from("3000000000000000000000"), // mock amount1 in wei (assume 18 decimals), so essentially this is 3000
+      ethers.BigNumber.from("39614081257132168796771975168"), // mock sqrtPriceX96 is (square root of ratio) * 2^96
+      ethers.BigNumber.from("1000000000000000000000000"), // mock liquidity in wei (assume 18 decimals), so essentially this is 1000
+      40943, // tick = log(3000) / log(1.0001) based on price ratio 3000:1
+    ];
+  });
 
-//     const findings = await handleTransaction(mockTxEvent);
-//     expect(findings).toHaveLength(0);
-//   });
+  let mockTxEvent: TestTransactionEvent;
+  beforeEach(() => {
+    mockTxEvent = new TestTransactionEvent().setBlock(0);
+  });
 
-//   it("2. returns empty findings if not to Forta Registry", async () => {
-//     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedCreateAgentData);
+  it("ignores transactions that don't emit a Swap Event and are not to an official Uni V3 Pool", async () => {
+    configMockProvider(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
 
-//     // .addTraces({
-//     //   from: mockNethermindAddress,
-//     //   to: mockFortaRegistryAddress,
-//     //   function: CREATE_AGENT_ABI,
-//     //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
-//     // });
+    mockTxEvent.setTo(mockOtherAddress);
 
-//     const findings = await handleTransaction(mockTxEvent);
-//     expect(findings).toHaveLength(0);
-//   });
+    const findings = await handleTransaction(mockTxEvent);
 
-//   it("3. returns empty findings if neither createAgent nor updateAgent are detected", async () => {
-//     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress);
-//     const findings = await handleTransaction(mockTxEvent);
-//     expect(findings).toHaveLength(0);
-//   });
+    expect(findings.length).toStrictEqual(0);
+  });
 
-//   it("4. returns empty findings if transaction calls createAgent but in wrong contract", async () => {
-//     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedCreateAgentData);
+  it("ignores transactions that emit a Swap Event but are not to an official Uni V3 Pool", async () => {
+    configMockProvider(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
 
-//     // .addTraces({
-//     //   from: mockNethermindAddress,
-//     //   to: mockFortaRegistryAddress,
-//     //   function: CREATE_AGENT_ABI,
-//     //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
-//     // });
+    mockTxEvent
+      .setTo(mockOtherAddress)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
 
-//     const findings = await handleTransaction(mockTxEvent);
-//     expect(findings).toHaveLength(0);
-//   });
+    const findings = await handleTransaction(mockTxEvent);
 
-//   it("5. returns empty findings if transaction calls updateAgent but in wrong contract", async () => {
-//     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockOtherAddress).setData(encodedUpdateAgentData);
+    expect(findings.length).toStrictEqual(0);
+  });
 
-//     // .addTraces({
-//     //   from: mockNethermindAddress,
-//     //   to: mockFortaRegistryAddress,
-//     //   function: UPDATE_AGENT_ABI,
-//     //   arguments: [MOCK_AGENT_ID, "metadata", MOCK_CHAIN_IDS],
-//     // });
+  it("ignores transactions that are to an official Uni V3 Pool but don't emit a Swap Event", async () => {
+    configMockProvider(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
 
-//     const findings = await handleTransaction(mockTxEvent);
-//     expect(findings).toHaveLength(0);
-//   });
+    mockTxEvent.setTo(mockRealPoolAddress);
 
-//   it("6. detects bot deployment", async () => {
-//     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedCreateAgentData);
+    const findings = await handleTransaction(mockTxEvent);
 
-//     // .addTraces({
-//     //   from: mockNethermindAddress,
-//     //   to: mockFortaRegistryAddress,
-//     //   function: CREATE_AGENT_ABI,
-//     //   arguments: [MOCK_AGENT_ID, mockNethermindAddress, "metadata", MOCK_CHAIN_IDS],
-//     // });
-//     // .setBlock(60343606);
-//     // .setBlock(56681086);
+    expect(findings.length).toStrictEqual(0);
+  });
 
-//     const findings = await handleTransaction(mockTxEvent);
+  it("successfully detects an official swap, returning 1 finding", async () => {
+    configMockProvider(mockRealPoolAddress); // real
+    configMockProvider(mockOtherAddress); // other real function calls but not to offical Uni V3 Pool
 
-//     expect(findings).toHaveLength(1);
-//     expect(findings[0]).toEqual(
-//       expect.objectContaining({
-//         name: "Nethermind Bot Deployment",
-//         description: `Nethermind deployed a new bot with ID: 1`,
-//         alertId: "NEW-BOT-DEPLOYED",
-//         severity: FindingSeverity.Low,
-//         type: FindingType.Info,
-//       } as Finding)
-//     );
-//   });
+    mockTxEvent // intercepted
+      .setTo(mockRealPoolAddress)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
 
-//   it("7. detects bot update", async () => {
-//     mockTxEvent.setFrom(mockNethermindAddress).setTo(mockFortaRegistryAddress).setData(encodedUpdateAgentData);
+    const findings = await handleTransaction(mockTxEvent);
+    expect(findings.length).toStrictEqual(1);
+    expect(findings).toStrictEqual([
+      Finding.fromObject({
+        name: "Uniswap V3 Swap Detected",
+        description: `Address: ${mockSender} swapped ${mockSwapEventArgs[2]} ${mockToken0} for ${mockSwapEventArgs[3]} ${mockToken1}, using pool: ${mockRealPoolAddress}`,
+        alertId: "UNISWAPV3-SWAP-DETECTED",
+        severity: FindingSeverity.Info,
+        type: FindingType.Info,
+        metadata: {
+          poolAddress: mockRealPoolAddress.toLowerCase(),
+          sender: mockSender,
+          interceptedPoolAddress: mockRealPoolAddress.toLowerCase(),
+          amount0: mockSwapEventArgs[2].toString(),
+          amount1: mockSwapEventArgs[3].toString(),
+        },
+      }),
+    ]);
+  });
 
-//     // .addTraces({
-//     //   from: mockNethermindAddress,
-//     //   to: mockFortaRegistryAddress,
-//     //   function: UPDATE_AGENT_ABI,
-//     //   arguments: [MOCK_AGENT_ID, "metadata", MOCK_CHAIN_IDS],
-//     // });
+  it("successfully detects multiple swaps in a txEvent, returning multiple findings", async () => {
+    configMockProvider(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
 
-//     const findings = await handleTransaction(mockTxEvent);
-
-//     expect(findings).toHaveLength(1);
-//     expect(findings[0]).toEqual(
-//       expect.objectContaining({
-//         name: "Nethermind Bot Update",
-//         description: `Nethermind updated an existing bot with ID: 1`,
-//         alertId: "EXISTING-BOT-UPDATED",
-//         severity: FindingSeverity.Low,
-//         type: FindingType.Info,
-//       } as Finding)
-//     );
-//   });
-// });
+    mockTxEvent
+      .setTo(mockRealPoolAddress)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
+    const findings = await handleTransaction(mockTxEvent);
+    expect(findings.length).toStrictEqual(2);
+    expect(findings).toStrictEqual([
+      Finding.fromObject({
+        name: "Uniswap V3 Swap Detected",
+        description: `Address: ${mockSender} swapped ${mockSwapEventArgs[2]} ${mockToken0} for ${mockSwapEventArgs[3]} ${mockToken1}, using pool: ${mockRealPoolAddress}`,
+        alertId: "UNISWAPV3-SWAP-DETECTED",
+        severity: FindingSeverity.Info,
+        type: FindingType.Info,
+        metadata: {
+          poolAddress: mockRealPoolAddress.toLowerCase(),
+          sender: mockSender,
+          interceptedPoolAddress: mockRealPoolAddress.toLowerCase(),
+          amount0: mockSwapEventArgs[2].toString(),
+          amount1: mockSwapEventArgs[3].toString(),
+        },
+      }),
+      Finding.fromObject({
+        name: "Uniswap V3 Swap Detected",
+        description: `Address: ${mockSender} swapped ${mockSwapEventArgs[2]} ${mockToken0} for ${mockSwapEventArgs[3]} ${mockToken1}, using pool: ${mockRealPoolAddress}`,
+        alertId: "UNISWAPV3-SWAP-DETECTED",
+        severity: FindingSeverity.Info,
+        type: FindingType.Info,
+        metadata: {
+          poolAddress: mockRealPoolAddress.toLowerCase(),
+          sender: mockSender,
+          interceptedPoolAddress: mockRealPoolAddress.toLowerCase(),
+          amount0: mockSwapEventArgs[2].toString(),
+          amount1: mockSwapEventArgs[3].toString(),
+        },
+      }),
+    ]);
+  });
+});
