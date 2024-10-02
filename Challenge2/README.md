@@ -1,26 +1,38 @@
-# Large Tether Transfer Agent
+# Uniswap Detection Bot
 
 ## Description
 
-This agent detects transactions with large Tether transfers
+This bot detects Uniswap V3 swaps on Ethereum Mainnet.
 
 ## Supported Chains
 
-- Ethereum
-- List any other chains this agent can support e.g. BSC
+- **Ethereum**
 
 ## Alerts
 
-Describe each of the type of alerts fired by this agent
+### NEW-BOT-DEPLOYED
 
-- FORTA-1
-  - Fired when a transaction contains a Tether transfer over 10,000 USDT
-  - Severity is always set to "low" (mention any conditions where it could be something else)
-  - Type is always set to "info" (mention any conditions where it could be something else)
-  - Mention any other type of metadata fields included with this alert
+- **Fired**: When the `Swap` event is emitted from an offical Uniswap V3 pool. The real pool's address is found using the Uniswap V3 Factory address, the Uniswap V3 Init Code hash and the intercepted pool values.
+- **Severity**: Low
+- **Type**: Info
+- **Metadata**:
+  - `poolAddress` (string)
+  - `sender` (string)
+  - `interceptedPoolAddress` (string)
+  - `amount0` (string)
+  - `amount1` (string)
 
 ## Test Data
 
-The agent behaviour can be verified with the following transactions:
+The bot's functionality can be verified with the following conditions:
 
-- 0x3a0f757030beec55c22cbc545dd8a844cbbb2e6019461769e1bc3f3a95d10826 (15,000 USDT)
+1. Returns empty findings if the transaction **does not emit a Swap event** and **is not directed to an official Uniswap V3 pool**.
+2. Returns empty findings if the transaction **emits a Swap event** but **is not directed to an official Uniswap V3 pool**.
+3. Returns empty findings if the transaction **is directed to an official Uniswap V3 pool** but **does not emit a Swap event**.
+4. Returns one finding if the transaction **emits a Swap event** and **is directed to an official Uniswap V3 pool**.
+5. Returns multiple findings if the transaction **emits multiple Swap events** and **is directed to an official Uniswap V3 pool**.
+
+### Transaction Examples on Ethereum:
+
+- **Swap event**:
+  [0x90c626d175971f12443019203da8b113e98df9dc5ea5bb642df247c2ffc9843c](https://etherscan.io/tx/0x90c626d175971f12443019203da8b113e98df9dc5ea5bb642df247c2ffc9843c)
