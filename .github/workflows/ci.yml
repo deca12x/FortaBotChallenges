@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "10"
+
+      - name: Install Challenge 1 dependencies
+        working-directory: ./Challenge1
+        shell: bash
+        run: npm install
+
+      - name: Run Challenge 1 tests
+        working-directory: ./Challenge1
+        shell: bash
+        run: npm test
+
+      - name: Install Challenge 2 dependencies
+        working-directory: ./Challenge2b
+        shell: bash
+        run: npm install
+
+      - name: Run Challenge 2 tests
+        working-directory: ./Challenge2b
+        shell: bash
+        run: npm test
