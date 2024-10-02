@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: "10"
+          node-version: "20"
 
       - name: Install Challenge 1 dependencies
         working-directory: ./Challenge1
