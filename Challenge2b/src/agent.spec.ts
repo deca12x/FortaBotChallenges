@@ -21,6 +21,7 @@ const mockSender = createAddress("0x03");
 const mockToken0 = createAddress("0x04");
 const mockToken1 = createAddress("0x05");
 const mockFee = 2;
+const mockOtherAddress = createAddress("0x06");
 const mockPoolValues = [mockToken0, mockToken1, mockFee];
 let mockRealPoolAddress: string;
 let mockSwapEventArgs: any[];
@@ -82,18 +83,50 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     mockTxEvent = new TestTransactionEvent().setBlock(0);
   });
 
-  it("ignores transactions that don't emit a Swap Event and are not to an official Uni V3 Pool", async () => {});
+  it("ignores transactions that don't emit a Swap Event and are not to an official Uni V3 Pool", async () => {
+    configMockProvider(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
 
-  it("ignores transactions that emit a Swap Event but are not to an official Uni V3 Pool", async () => {});
+    mockTxEvent.setTo(mockOtherAddress);
 
-  it("ignores transactions that are to an official Uni V3 Pool but don't emit a Swap Event", async () => {});
+    const findings = await handleTransaction(mockTxEvent);
+
+    expect(findings.length).toStrictEqual(0);
+  });
+
+  it("ignores transactions that emit a Swap Event but are not to an official Uni V3 Pool", async () => {
+    configMockProvider(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
+
+    mockTxEvent
+      .setTo(mockOtherAddress)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
+
+    const findings = await handleTransaction(mockTxEvent);
+
+    expect(findings.length).toStrictEqual(0);
+  });
+
+  it("ignores transactions that are to an official Uni V3 Pool but don't emit a Swap Event", async () => {
+    configMockProvider(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
+
+    mockTxEvent.setTo(mockRealPoolAddress);
+
+    const findings = await handleTransaction(mockTxEvent);
+
+    expect(findings.length).toStrictEqual(0);
+  });
 
   it("successfully detects an official swap, returning 1 finding", async () => {
     configMockProvider(mockRealPoolAddress); // real
+    configMockProvider(mockOtherAddress); // other real function calls but not to offical Uni V3 Pool
 
     mockTxEvent // intercepted
       .setTo(mockRealPoolAddress)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs);
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
+
     const findings = await handleTransaction(mockTxEvent);
     expect(findings.length).toStrictEqual(1);
     expect(findings).toStrictEqual([
@@ -114,5 +147,46 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     ]);
   });
 
-  it("successfully detects multiple swaps in a txEvent, returning multiple findings", async () => {});
+  it("successfully detects multiple swaps in a txEvent, returning multiple findings", async () => {
+    configMockProvider(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
+
+    mockTxEvent
+      .setTo(mockRealPoolAddress)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
+    const findings = await handleTransaction(mockTxEvent);
+    expect(findings.length).toStrictEqual(2);
+    expect(findings).toStrictEqual([
+      Finding.fromObject({
+        name: "Uniswap V3 Swap Detected",
+        description: `Address: ${mockSender} swapped ${mockSwapEventArgs[2]} ${mockToken0} for ${mockSwapEventArgs[3]} ${mockToken1}, using pool: ${mockRealPoolAddress}`,
+        alertId: "UNISWAPV3-SWAP-DETECTED",
+        severity: FindingSeverity.Info,
+        type: FindingType.Info,
+        metadata: {
+          poolAddress: mockRealPoolAddress.toLowerCase(),
+          sender: mockSender,
+          interceptedPoolAddress: mockRealPoolAddress.toLowerCase(),
+          amount0: mockSwapEventArgs[2].toString(),
+          amount1: mockSwapEventArgs[3].toString(),
+        },
+      }),
+      Finding.fromObject({
+        name: "Uniswap V3 Swap Detected",
+        description: `Address: ${mockSender} swapped ${mockSwapEventArgs[2]} ${mockToken0} for ${mockSwapEventArgs[3]} ${mockToken1}, using pool: ${mockRealPoolAddress}`,
+        alertId: "UNISWAPV3-SWAP-DETECTED",
+        severity: FindingSeverity.Info,
+        type: FindingType.Info,
+        metadata: {
+          poolAddress: mockRealPoolAddress.toLowerCase(),
+          sender: mockSender,
+          interceptedPoolAddress: mockRealPoolAddress.toLowerCase(),
+          amount0: mockSwapEventArgs[2].toString(),
+          amount1: mockSwapEventArgs[3].toString(),
+        },
+      }),
+    ]);
+  });
 });
