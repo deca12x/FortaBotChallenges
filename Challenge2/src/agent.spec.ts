@@ -102,7 +102,7 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     expect(findings).toStrictEqual([
       Finding.fromObject({
         name: "Uniswap V3 Swap Detected",
-        description: `Address: ${mockSender} swapped ${mockSwapEventArgs[2]} ${mockToken0} for ${mockSwapEventArgs[3]} ${mockToken1}, using pool: ${mockRealPoolAddress}`,
+        description: `Address ${mockSender} swapped ${Math.abs(mockSwapEventArgs[2])} of token ${mockToken0} for ${mockSwapEventArgs[3]} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
         alertId: "UNISWAPV3-SWAP-DETECTED",
         severity: FindingSeverity.Info,
         type: FindingType.Info,
@@ -131,7 +131,7 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     expect(findings).toStrictEqual([
       Finding.fromObject({
         name: "Uniswap V3 Swap Detected",
-        description: `Address: ${mockSender} swapped ${mockSwapEventArgs[2]} ${mockToken0} for ${mockSwapEventArgs[3]} ${mockToken1}, using pool: ${mockRealPoolAddress}`,
+        description: `Address ${mockSender} swapped ${Math.abs(mockSwapEventArgs[2])} of token ${mockToken0} for ${mockSwapEventArgs[3]} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
         alertId: "UNISWAPV3-SWAP-DETECTED",
         severity: FindingSeverity.Info,
         type: FindingType.Info,
@@ -145,7 +145,7 @@ describe("Uni V3 Swap Detector Test Suite", () => {
       }),
       Finding.fromObject({
         name: "Uniswap V3 Swap Detected",
-        description: `Address: ${mockSender} swapped ${mockSwapEventArgs[2]} ${mockToken0} for ${mockSwapEventArgs[3]} ${mockToken1}, using pool: ${mockRealPoolAddress}`,
+        description: `Address ${mockSender} swapped ${Math.abs(mockSwapEventArgs[2])} of token ${mockToken0} for ${mockSwapEventArgs[3]} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
         alertId: "UNISWAPV3-SWAP-DETECTED",
         severity: FindingSeverity.Info,
         type: FindingType.Info,
