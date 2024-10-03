@@ -1,22 +1,12 @@
-import {
-  Finding,
-  FindingSeverity,
-  FindingType,
-  HandleTransaction,
-  ethers,
-} from "forta-agent";
+import { Finding, FindingSeverity, FindingType, HandleTransaction, ethers } from "forta-agent";
 import { createAddress } from "forta-agent-tools";
-import {
-  TestTransactionEvent,
-  MockEthersProvider,
-} from "forta-agent-tools/lib/test";
+import { TestTransactionEvent, MockEthersProvider } from "forta-agent-tools/lib/test";
 import { provideHandleTransaction } from "./agent";
 import { UNI_SWAP_EVENT_ABI, UNI_POOL_FUNCTIONS_ABI } from "./constants";
 import { getRealPoolAddress } from "./agent";
 
 const mockUniFactoryAddress = createAddress("0x01");
-const mockInitCodeHash =
-  "0x0000000000000000000000000000000000000000000000000000000000000000";
+const mockInitCodeHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const mockSender = createAddress("0x03");
 const mockToken0 = createAddress("0x04");
 const mockToken1 = createAddress("0x05");
@@ -28,9 +18,7 @@ let mockSwapEventArgs: any[];
 
 let mockProvider = new MockEthersProvider();
 const provider = mockProvider as unknown as ethers.providers.Provider;
-let uniPoolFunctionsInterface = new ethers.utils.Interface(
-  UNI_POOL_FUNCTIONS_ABI
-);
+let uniPoolFunctionsInterface = new ethers.utils.Interface(UNI_POOL_FUNCTIONS_ABI);
 
 const handleTransaction: HandleTransaction = provideHandleTransaction(
   mockUniFactoryAddress,
@@ -60,11 +48,7 @@ const configMockProvider = (poolAddress: string) => {
 describe("Uni V3 Swap Detector Test Suite", () => {
   beforeAll(async () => {
     mockRealPoolAddress = (
-      await getRealPoolAddress(
-        mockUniFactoryAddress,
-        mockInitCodeHash,
-        mockPoolValues
-      )
+      await getRealPoolAddress(mockUniFactoryAddress, mockInitCodeHash, mockPoolValues)
     ).toLowerCase();
 
     mockSwapEventArgs = [
@@ -84,37 +68,23 @@ describe("Uni V3 Swap Detector Test Suite", () => {
   });
 
   it("ignores transactions that don't emit a Swap Event and are not to an official Uni V3 Pool", async () => {
-    configMockProvider(mockRealPoolAddress);
     configMockProvider(mockOtherAddress);
-
     mockTxEvent.setTo(mockOtherAddress);
-
     const findings = await handleTransaction(mockTxEvent);
-
     expect(findings.length).toStrictEqual(0);
   });
 
   it("ignores transactions that emit a Swap Event but are not to an official Uni V3 Pool", async () => {
-    configMockProvider(mockRealPoolAddress);
     configMockProvider(mockOtherAddress);
-
-    mockTxEvent
-      .setTo(mockOtherAddress)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
-
+    mockTxEvent.setTo(mockOtherAddress).addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
     const findings = await handleTransaction(mockTxEvent);
-
     expect(findings.length).toStrictEqual(0);
   });
 
   it("ignores transactions that are to an official Uni V3 Pool but don't emit a Swap Event", async () => {
     configMockProvider(mockRealPoolAddress);
-    configMockProvider(mockOtherAddress);
-
     mockTxEvent.setTo(mockRealPoolAddress);
-
     const findings = await handleTransaction(mockTxEvent);
-
     expect(findings.length).toStrictEqual(0);
   });
 

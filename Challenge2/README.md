@@ -10,7 +10,7 @@ This bot detects Uniswap V3 swaps on Ethereum Mainnet.
 
 ## Alerts
 
-### NEW-BOT-DEPLOYED
+### UNISWAPV3-SWAP-DETECTED
 
 - **Fired**: When the `Swap` event is emitted from an offical Uniswap V3 pool. The real pool's address is found using the Uniswap V3 Factory address, the Uniswap V3 Init Code hash and the intercepted pool values.
 - **Severity**: Low
