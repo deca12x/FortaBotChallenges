@@ -13,7 +13,7 @@ import { UNI_SWAP_EVENT_ABI, UNI_POOL_FUNCTIONS_ABI, UNI_FACTORY_ADDRESS, UNI_IN
 
 const addressIsUniCache = new LRUCache<string, boolean>({ max: 100000 });
 
-interface PoolValues {
+export interface PoolValues {
   token0: string;
   token1: string;
   fee: number;
@@ -34,10 +34,14 @@ const getPoolValues = async (
   return { token0, token1, fee };
 };
 
-export const getRealPoolAddress = (uniFactoryAddress: string, uniInitCode: string, interceptedPoolValues: any[]) => {
+export const getRealPoolAddress = (
+  uniFactoryAddress: string,
+  uniInitCode: string,
+  interceptedPoolValues: PoolValues
+) => {
   const interceptedPoolValuesBytes = ethers.utils.defaultAbiCoder.encode(
     ["address", "address", "uint24"],
-    interceptedPoolValues
+    [interceptedPoolValues.token0, interceptedPoolValues.token1, interceptedPoolValues.fee]
   );
   const interceptedSalt = ethers.utils.solidityKeccak256(["bytes"], [interceptedPoolValuesBytes]);
   const realPoolAddress = ethers.utils.getCreate2Address(uniFactoryAddress, interceptedSalt, uniInitCode);
@@ -70,11 +74,7 @@ export function provideHandleTransaction(
 
       if (isPoolInCache === undefined) {
         // if wan't in cache, check if it's a real pool
-        const realPoolAddress: string = await getRealPoolAddress(uniFactoryAddress, uniInitCode, [
-          interceptedPoolValues.token0,
-          interceptedPoolValues.token1,
-          interceptedPoolValues.fee,
-        ]);
+        const realPoolAddress: string = await getRealPoolAddress(uniFactoryAddress, uniInitCode, interceptedPoolValues);
         const isRealPool = realPoolAddress.toLowerCase() === interceptedPoolAddress.toLowerCase();
         addressIsUniCache.set(interceptedPoolAddress, isRealPool); // now it's in cache
         if (!isRealPool) return findings; // if not a real pool, return

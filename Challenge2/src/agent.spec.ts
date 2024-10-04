@@ -3,7 +3,7 @@ import { createAddress } from "forta-agent-tools";
 import { TestTransactionEvent, MockEthersProvider } from "forta-agent-tools/lib/test";
 import { provideHandleTransaction } from "./agent";
 import { UNI_SWAP_EVENT_ABI, UNI_POOL_FUNCTIONS_ABI } from "./constants";
-import { getRealPoolAddress } from "./agent";
+import { PoolValues, getRealPoolAddress } from "./agent";
 
 const mockUniFactoryAddress = createAddress("0x01");
 const mockInitCodeHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -12,9 +12,19 @@ const mockToken0 = createAddress("0x04");
 const mockToken1 = createAddress("0x05");
 const mockFee = 2;
 const mockOtherAddress = createAddress("0x06");
-const mockPoolValues = [mockToken0, mockToken1, mockFee];
+const mockPoolValues: PoolValues = { token0: mockToken0, token1: mockToken1, fee: mockFee };
 let mockRealPoolAddress: string;
-let mockSwapEventArgs: any[];
+let mockSwapEventArgs: SwapEventArgs;
+
+interface SwapEventArgs {
+  sender: string;
+  poolAddress: string;
+  amount0: ethers.BigNumber;
+  amount1: ethers.BigNumber;
+  sqrtPriceX96: ethers.BigNumber;
+  liquidity: ethers.BigNumber;
+  tick: number;
+}
 
 let mockProvider = new MockEthersProvider();
 const provider = mockProvider as unknown as ethers.providers.Provider;
@@ -50,16 +60,15 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     mockRealPoolAddress = (
       await getRealPoolAddress(mockUniFactoryAddress, mockInitCodeHash, mockPoolValues)
     ).toLowerCase();
-
-    mockSwapEventArgs = [
-      mockSender,
-      mockRealPoolAddress,
-      ethers.BigNumber.from("-1000000000000000000"), // mock amount0 in wei (assume 18 decimals), so essentially this is -1
-      ethers.BigNumber.from("3000000000000000000000"), // mock amount1 in wei (assume 18 decimals), so essentially this is 3000
-      ethers.BigNumber.from("39614081257132168796771975168"), // mock sqrtPriceX96 is (square root of ratio) * 2^96
-      ethers.BigNumber.from("1000000000000000000000000"), // mock liquidity in wei (assume 18 decimals), so essentially this is 1000
-      40943, // tick = log(3000) / log(1.0001) based on price ratio 3000:1
-    ];
+    mockSwapEventArgs = {
+      sender: mockSender,
+      poolAddress: mockRealPoolAddress,
+      amount0: ethers.BigNumber.from("-1000000000000000000"),
+      amount1: ethers.BigNumber.from("3000000000000000000000"),
+      sqrtPriceX96: ethers.BigNumber.from("39614081257132168796771975168"),
+      liquidity: ethers.BigNumber.from("1000000000000000000000000"),
+      tick: 40943,
+    };
   });
 
   let mockTxEvent: TestTransactionEvent;
@@ -71,21 +80,26 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     configMockProvider(mockOtherAddress);
     mockTxEvent.setTo(mockOtherAddress);
     const findings = await handleTransaction(mockTxEvent);
-    expect(findings.length).toStrictEqual(0);
+    expect(findings).toStrictEqual([]);
   });
 
   it("ignores transactions that emit a Swap Event but are not to an official Uni V3 Pool", async () => {
     configMockProvider(mockOtherAddress);
-    mockTxEvent.setTo(mockOtherAddress).addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
+    mockTxEvent
+      .setTo(mockOtherAddress)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
     const findings = await handleTransaction(mockTxEvent);
-    expect(findings.length).toStrictEqual(0);
+    expect(findings).toStrictEqual([]);
   });
 
   it("ignores transactions that are to an official Uni V3 Pool but don't emit a Swap Event", async () => {
     configMockProvider(mockRealPoolAddress);
-    mockTxEvent.setTo(mockRealPoolAddress);
+    configMockProvider(mockOtherAddress);
+    mockTxEvent
+      .setTo(mockRealPoolAddress)
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
     const findings = await handleTransaction(mockTxEvent);
-    expect(findings.length).toStrictEqual(0);
+    expect(findings).toStrictEqual([]);
   });
 
   it("successfully detects an official swap, returning 1 finding", async () => {
@@ -94,15 +108,15 @@ describe("Uni V3 Swap Detector Test Suite", () => {
 
     mockTxEvent // intercepted
       .setTo(mockRealPoolAddress)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, Object.values(mockSwapEventArgs))
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings.length).toStrictEqual(1);
     expect(findings).toStrictEqual([
       Finding.fromObject({
         name: "Uniswap V3 Swap Detected",
-        description: `Address ${mockSender} swapped ${Math.abs(mockSwapEventArgs[2])} of token ${mockToken0} for ${mockSwapEventArgs[3]} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
+        description: `Address ${mockSender} swapped ${Math.abs(Number(mockSwapEventArgs.amount0))} of token ${mockToken0} for ${mockSwapEventArgs.amount1} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
         alertId: "UNISWAPV3-SWAP-DETECTED",
         severity: FindingSeverity.Info,
         type: FindingType.Info,
@@ -110,8 +124,8 @@ describe("Uni V3 Swap Detector Test Suite", () => {
           poolAddress: mockRealPoolAddress.toLowerCase(),
           sender: mockSender,
           interceptedPoolAddress: mockRealPoolAddress.toLowerCase(),
-          amount0: mockSwapEventArgs[2].toString(),
-          amount1: mockSwapEventArgs[3].toString(),
+          amount0: mockSwapEventArgs.amount0.toString(),
+          amount1: mockSwapEventArgs.amount1.toString(),
         },
       }),
     ]);
@@ -123,15 +137,15 @@ describe("Uni V3 Swap Detector Test Suite", () => {
 
     mockTxEvent
       .setTo(mockRealPoolAddress)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, mockSwapEventArgs)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, mockSwapEventArgs);
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, Object.values(mockSwapEventArgs))
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, Object.values(mockSwapEventArgs))
+      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
     const findings = await handleTransaction(mockTxEvent);
     expect(findings.length).toStrictEqual(2);
     expect(findings).toStrictEqual([
       Finding.fromObject({
         name: "Uniswap V3 Swap Detected",
-        description: `Address ${mockSender} swapped ${Math.abs(mockSwapEventArgs[2])} of token ${mockToken0} for ${mockSwapEventArgs[3]} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
+        description: `Address ${mockSender} swapped ${Math.abs(Number(mockSwapEventArgs.amount0))} of token ${mockToken0} for ${mockSwapEventArgs.amount1} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
         alertId: "UNISWAPV3-SWAP-DETECTED",
         severity: FindingSeverity.Info,
         type: FindingType.Info,
@@ -139,13 +153,13 @@ describe("Uni V3 Swap Detector Test Suite", () => {
           poolAddress: mockRealPoolAddress.toLowerCase(),
           sender: mockSender,
           interceptedPoolAddress: mockRealPoolAddress.toLowerCase(),
-          amount0: mockSwapEventArgs[2].toString(),
-          amount1: mockSwapEventArgs[3].toString(),
+          amount0: mockSwapEventArgs.amount0.toString(),
+          amount1: mockSwapEventArgs.amount1.toString(),
         },
       }),
       Finding.fromObject({
         name: "Uniswap V3 Swap Detected",
-        description: `Address ${mockSender} swapped ${Math.abs(mockSwapEventArgs[2])} of token ${mockToken0} for ${mockSwapEventArgs[3]} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
+        description: `Address ${mockSender} swapped ${Math.abs(Number(mockSwapEventArgs.amount0))} of token ${mockToken0} for ${mockSwapEventArgs.amount1} of token ${mockToken1}, using pool ${mockRealPoolAddress}`,
         alertId: "UNISWAPV3-SWAP-DETECTED",
         severity: FindingSeverity.Info,
         type: FindingType.Info,
@@ -153,8 +167,8 @@ describe("Uni V3 Swap Detector Test Suite", () => {
           poolAddress: mockRealPoolAddress.toLowerCase(),
           sender: mockSender,
           interceptedPoolAddress: mockRealPoolAddress.toLowerCase(),
-          amount0: mockSwapEventArgs[2].toString(),
-          amount1: mockSwapEventArgs[3].toString(),
+          amount0: mockSwapEventArgs.amount0.toString(),
+          amount1: mockSwapEventArgs.amount1.toString(),
         },
       }),
     ]);
