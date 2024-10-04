@@ -1,4 +1,4 @@
-# Uniswap Detection Bot
+# UniswapV3 Swap Detection Bot
 
 ## Description
 
