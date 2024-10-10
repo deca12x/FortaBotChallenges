@@ -3,10 +3,11 @@ import { createAddress } from "forta-agent-tools";
 import { TestTransactionEvent, MockEthersProvider } from "forta-agent-tools/lib/test";
 import { provideHandleTransaction } from "./agent";
 import { UNI_SWAP_EVENT_ABI, UNI_POOL_FUNCTIONS_ABI } from "./constants";
-import { PoolValues, getRealPoolAddress } from "./agent";
+import { getUniV3PoolAddress } from "./utils";
+import { PoolValues, SwapEventArgs } from "./types";
 
 const mockUniFactoryAddress = createAddress("0x01");
-const mockInitCodeHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const mockInitCodeHash = ethers.constants.HashZero;
 const mockSender = createAddress("0x03");
 const mockToken0 = createAddress("0x04");
 const mockToken1 = createAddress("0x05");
@@ -15,16 +16,6 @@ const mockOtherAddress = createAddress("0x06");
 const mockPoolValues: PoolValues = { token0: mockToken0, token1: mockToken1, fee: mockFee };
 let mockRealPoolAddress: string;
 let mockSwapEventArgs: SwapEventArgs;
-
-interface SwapEventArgs {
-  sender: string;
-  poolAddress: string;
-  amount0: ethers.BigNumber;
-  amount1: ethers.BigNumber;
-  sqrtPriceX96: ethers.BigNumber;
-  liquidity: ethers.BigNumber;
-  tick: number;
-}
 
 let mockProvider = new MockEthersProvider();
 const provider = mockProvider as unknown as ethers.providers.Provider;
@@ -58,7 +49,7 @@ const configMockProvider = (poolAddress: string) => {
 describe("Uni V3 Swap Detector Test Suite", () => {
   beforeAll(async () => {
     mockRealPoolAddress = (
-      await getRealPoolAddress(mockUniFactoryAddress, mockInitCodeHash, mockPoolValues)
+      await getUniV3PoolAddress(mockUniFactoryAddress, mockInitCodeHash, mockPoolValues)
     ).toLowerCase();
     mockSwapEventArgs = {
       sender: mockSender,
@@ -68,7 +59,7 @@ describe("Uni V3 Swap Detector Test Suite", () => {
       sqrtPriceX96: ethers.BigNumber.from("39614081257132168796771975168"),
       liquidity: ethers.BigNumber.from("1000000000000000000000000"),
       tick: 40943,
-    };
+    } as SwapEventArgs;
   });
 
   let mockTxEvent: TestTransactionEvent;
@@ -76,28 +67,9 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     mockTxEvent = new TestTransactionEvent().setBlock(0);
   });
 
-  it("ignores transactions that don't emit a Swap Event and are not to an official Uni V3 Pool", async () => {
-    configMockProvider(mockOtherAddress);
-    mockTxEvent.setTo(mockOtherAddress);
-    const findings = await handleTransaction(mockTxEvent);
-    expect(findings).toStrictEqual([]);
-  });
-
   it("ignores transactions that emit a Swap Event but are not to an official Uni V3 Pool", async () => {
     configMockProvider(mockOtherAddress);
-    mockTxEvent
-      .setTo(mockOtherAddress)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
-    const findings = await handleTransaction(mockTxEvent);
-    expect(findings).toStrictEqual([]);
-  });
-
-  it("ignores transactions that are to an official Uni V3 Pool but don't emit a Swap Event", async () => {
-    configMockProvider(mockRealPoolAddress);
-    configMockProvider(mockOtherAddress);
-    mockTxEvent
-      .setTo(mockRealPoolAddress)
-      .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
+    mockTxEvent.addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([]);
   });
@@ -107,7 +79,6 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     configMockProvider(mockOtherAddress); // other real function calls but not to offical Uni V3 Pool
 
     mockTxEvent // intercepted
-      .setTo(mockRealPoolAddress)
       .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, Object.values(mockSwapEventArgs))
       .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
 
@@ -136,7 +107,6 @@ describe("Uni V3 Swap Detector Test Suite", () => {
     configMockProvider(mockOtherAddress);
 
     mockTxEvent
-      .setTo(mockRealPoolAddress)
       .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, Object.values(mockSwapEventArgs))
       .addEventLog(UNI_SWAP_EVENT_ABI, mockRealPoolAddress, Object.values(mockSwapEventArgs))
       .addEventLog(UNI_SWAP_EVENT_ABI, mockOtherAddress, Object.values(mockSwapEventArgs));
