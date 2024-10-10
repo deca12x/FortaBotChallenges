@@ -10,43 +10,10 @@ import {
 import { Provider } from "@ethersproject/providers";
 import { LRUCache } from "lru-cache";
 import { UNI_SWAP_EVENT_ABI, UNI_POOL_FUNCTIONS_ABI, UNI_FACTORY_ADDRESS, UNI_INIT_CODE_HASH } from "./constants";
+import { PoolValues } from "./types";
+import { getPoolValues, getUniV3PoolAddress } from "./utils";
 
 const addressIsUniCache = new LRUCache<string, boolean>({ max: 100000 });
-
-export interface PoolValues {
-  token0: string;
-  token1: string;
-  fee: number;
-}
-
-const getPoolValues = async (
-  provider: Provider,
-  uniPoolFunctionsAbi: string[],
-  poolAddress: string,
-  txEvent: TransactionEvent
-) => {
-  const poolContract = new ethers.Contract(poolAddress, uniPoolFunctionsAbi, provider);
-  const [token0, token1, fee] = await Promise.all([
-    poolContract.token0({ blockTag: txEvent.blockNumber }),
-    poolContract.token1({ blockTag: txEvent.blockNumber }),
-    poolContract.fee({ blockTag: txEvent.blockNumber }),
-  ]);
-  return { token0, token1, fee };
-};
-
-export const getRealPoolAddress = (
-  uniFactoryAddress: string,
-  uniInitCode: string,
-  interceptedPoolValues: PoolValues
-) => {
-  const interceptedPoolValuesBytes = ethers.utils.defaultAbiCoder.encode(
-    ["address", "address", "uint24"],
-    [interceptedPoolValues.token0, interceptedPoolValues.token1, interceptedPoolValues.fee]
-  );
-  const interceptedSalt = ethers.utils.solidityKeccak256(["bytes"], [interceptedPoolValuesBytes]);
-  const realPoolAddress = ethers.utils.getCreate2Address(uniFactoryAddress, interceptedSalt, uniInitCode);
-  return realPoolAddress;
-};
 
 export function provideHandleTransaction(
   uniFactoryAddress: string,
@@ -74,10 +41,10 @@ export function provideHandleTransaction(
 
       if (isPoolInCache === undefined) {
         // if wan't in cache, check if it's a real pool
-        const realPoolAddress: string = await getRealPoolAddress(uniFactoryAddress, uniInitCode, interceptedPoolValues);
-        const isRealPool = realPoolAddress.toLowerCase() === interceptedPoolAddress.toLowerCase();
-        addressIsUniCache.set(interceptedPoolAddress, isRealPool); // now it's in cache
-        if (!isRealPool) return findings; // if not a real pool, return
+        const uniV3PoolAddress: string = getUniV3PoolAddress(uniFactoryAddress, uniInitCode, interceptedPoolValues);
+        const isUniV3Pool = uniV3PoolAddress.toLowerCase() === interceptedPoolAddress.toLowerCase();
+        addressIsUniCache.set(interceptedPoolAddress, isUniV3Pool); // now it's in cache
+        if (!isUniV3Pool) return findings; // if not a real pool, return
       }
 
       // remaining scenarios are: pool was in cache and is a real pool, or wan't in cache (but now it is) and is a real pool
