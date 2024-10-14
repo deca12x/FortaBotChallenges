@@ -1,80 +1,44 @@
-// import {
-//   Finding,
-//   FindingSeverity,
-//   FindingType,
-//   HandleTransaction,
-//   TransactionEvent,
-//   getEthersProvider,
-//   ethers,
-// } from "forta-agent";
-// import { Provider } from "@ethersproject/providers";
+import { Finding, FindingSeverity, FindingType, HandleBlock, BlockEvent, getEthersProvider, ethers } from "forta-agent";
+import { L1_DAI_TOKEN_ADDRESS, L1_ESCROW_ABI, L1_ARB_ESCROW_ADDRESS, L1_OPT_ESCROW_ADDRESS } from "./constants";
+import { Contract } from "@ethersproject/contracts";
+import { Provider } from "@ethersproject/providers";
+import { l1Finding } from "./utils";
 
-// const addressIsUniCache = new LRUCache<string, boolean>({ max: 100000 });
+let chainId: number;
+let l1OptEscrowBalance: number;
+let l1ArbEscrowBalance: number;
 
-// export function provideHandleTransaction(
-//   uniFactoryAddress: string,
-//   uniInitCode: string,
-//   uniSwapEventAbi: string,
-//   uniPoolFunctionsAbi: string[],
-//   provider: Provider
-// ): HandleTransaction {
-//   return async (txEvent: TransactionEvent) => {
-//     const findings: Finding[] = [];
-//     const filteredLogs = txEvent.filterLog(uniSwapEventAbi);
+export function provideInitialize(provider: ethers.providers.Provider) {
+  return async function initialize() {
+    const network = await provider.getNetwork();
+    chainId = network.chainId;
+  };
+}
 
-//     for (const filteredLog of filteredLogs) {
-//       const interceptedPoolAddress = filteredLog.address;
-//       const isPoolInCache = addressIsUniCache.get(interceptedPoolAddress);
+export function provideHandleBlock(provider: ethers.providers.Provider): HandleBlock {
+  return async (blEvent: BlockEvent) => {
+    const findings: Finding[] = [];
 
-//       if (isPoolInCache === false) return findings; // if was in cache and not a real pool, return
+    if (chainId === 1) {
+      const l1DaiContract = new Contract(L1_DAI_TOKEN_ADDRESS, L1_ESCROW_ABI, provider);
+      const newL1OptEscrowBalance = await l1DaiContract.balanceOf(L1_OPT_ESCROW_ADDRESS, {
+        blockTag: blEvent.blockNumber,
+      });
+      const newL1ArbEscrowBalance = await l1DaiContract.balanceOf(L1_ARB_ESCROW_ADDRESS, {
+        blockTag: blEvent.blockNumber,
+      });
+      if (newL1OptEscrowBalance !== l1OptEscrowBalance || newL1ArbEscrowBalance !== l1ArbEscrowBalance) {
+        l1OptEscrowBalance = newL1OptEscrowBalance;
+        l1ArbEscrowBalance = newL1ArbEscrowBalance;
+        findings.push(l1Finding(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString()));
+      }
+      // USE ALERTS...     l2Alerts.alerts[0].metadata[isOptEscrow ? "optEscBal" : "abtEscBal"] = balance;
+    } else {
+    }
+  };
+}
 
-//       const interceptedPoolValues: PoolValues = await getPoolValues(
-//         provider,
-//         uniPoolFunctionsAbi,
-//         interceptedPoolAddress,
-//         txEvent
-//       );
-
-//       if (isPoolInCache === undefined) {
-//         // if wan't in cache, check if it's a real pool
-//         const uniV3PoolAddress: string = getUniV3PoolAddress(uniFactoryAddress, uniInitCode, interceptedPoolValues);
-//         const isUniV3Pool = uniV3PoolAddress.toLowerCase() === interceptedPoolAddress.toLowerCase();
-//         addressIsUniCache.set(interceptedPoolAddress, isUniV3Pool); // now it's in cache
-//         if (!isUniV3Pool) return findings; // if not a real pool, return
-//       }
-
-//       // remaining scenarios are: pool was in cache and is a real pool, or wan't in cache (but now it is) and is a real pool
-
-//       const { sender, amount0, amount1 } = filteredLog.args;
-
-//       findings.push(
-//         Finding.fromObject({
-//           name: "Uniswap V3 Swap Detected",
-//           description: `Address ${sender} swapped ${Math.abs(amount0)} of token ${interceptedPoolValues.token0} for ${amount1} of token ${interceptedPoolValues.token1}, using pool ${interceptedPoolAddress}`,
-//           alertId: "UNISWAPV3-SWAP-DETECTED",
-//           severity: FindingSeverity.Info,
-//           type: FindingType.Info,
-//           metadata: {
-//             poolAddress: interceptedPoolAddress.toLowerCase(),
-//             sender,
-//             interceptedPoolAddress,
-//             amount0: amount0.toString(),
-//             amount1: amount1.toString(),
-//           },
-//         })
-//       );
-//     }
-
-//     return findings;
-//   };
-// }
-
-// export default {
-//   handleTransaction: provideHandleTransaction(
-//     UNI_FACTORY_ADDRESS,
-//     UNI_INIT_CODE_HASH,
-//     UNI_SWAP_EVENT_ABI,
-//     UNI_POOL_FUNCTIONS_ABI,
-//     getEthersProvider()
-//   ),
-// };
+export default {
+  initialize: provideInitialize(getEthersProvider()),
+  handleBlock: provideHandleBlock(getEthersProvider()),
+};

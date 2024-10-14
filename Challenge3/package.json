@@ -1,5 +1,5 @@
 {
-  "name": "uniswap-detection-bot",
+  "name": "makerdao-bridge-invariant-bot",
   "displayName": "Bot Checking Uniswap V3 Swaps",
   "version": "0.0.1",
   "description": "This bot detects Uniswap V3 swaps on Ethereum Mainnet.",
@@ -9,7 +9,8 @@
   "promoUrl": "https://forta.org",
   "format": "prettier --write \"src/**/*.ts\"",
   "chainIds": [
-    1
+    1, 10, 42161
+
   ],
   "scripts": {
     "build": "tsc",
