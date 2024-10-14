@@ -2,11 +2,13 @@ import { Finding, FindingSeverity, FindingType, HandleBlock, BlockEvent, getEthe
 import { L1_DAI_TOKEN_ADDRESS, L1_ESCROW_ABI, L1_ARB_ESCROW_ADDRESS, L1_OPT_ESCROW_ADDRESS } from "./constants";
 import { Contract } from "@ethersproject/contracts";
 import { Provider } from "@ethersproject/providers";
-import { l1Finding } from "./utils";
+import { l1Finding, getL1DaiLocked, getL2DaiSupply, emitAlert, l2Finding } from "./utils";
 
 let chainId: number;
 let l1OptEscrowBalance: number;
 let l1ArbEscrowBalance: number;
+let l1DaiLocked: ethers.BigNumber;
+let l2DaiSupply: ethers.BigNumber;
 
 export function provideInitialize(provider: ethers.providers.Provider) {
   return async function initialize() {
@@ -31,10 +33,16 @@ export function provideHandleBlock(provider: ethers.providers.Provider): HandleB
         l1OptEscrowBalance = newL1OptEscrowBalance;
         l1ArbEscrowBalance = newL1ArbEscrowBalance;
         findings.push(l1Finding(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString()));
+        emitAlert(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString());
       }
-      // USE ALERTS...     l2Alerts.alerts[0].metadata[isOptEscrow ? "optEscBal" : "abtEscBal"] = balance;
     } else {
+      l1DaiLocked = await getL1DaiLocked(chainId);
+      l2DaiSupply = await getL2DaiSupply(blEvent.blockNumber, provider);
+      if (l1DaiLocked.gt(l2DaiSupply)) {
+        l2Finding(l1DaiLocked.toString(), l2DaiSupply.toString(), chainId);
+      }
     }
+    return findings;
   };
 }
 
