@@ -51,8 +51,9 @@ export const emitAlert = (_l1OptEscrowBalance: string, _l1ArbEscrowBalance: stri
 };
 
 const getL1Alerts = async (chainId: number): Promise<AlertsResponse> => {
+  console.log("1");
   return await getAlerts({
-    alertId: "L1-ESCROW",
+    alertId: "L1-DAI-LOCKED",
     chainId: chainId,
   });
 };

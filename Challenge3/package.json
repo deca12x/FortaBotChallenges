@@ -8,10 +8,7 @@
   "licenseUrl": "https://github.com/forta-network/forta-bot-sdk/blob/master/starter-project/LICENSE.md",
   "promoUrl": "https://forta.org",
   "format": "prettier --write \"src/**/*.ts\"",
-  "chainIds": [
-    1, 10, 42161
-
-  ],
+  "chainIds": [ 1, 10, 42161],
   "scripts": {
     "build": "tsc",
     "start": "npm run start:dev",

@@ -36,7 +36,9 @@ export function provideHandleBlock(provider: ethers.providers.Provider): HandleB
         emitAlert(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString());
       }
     } else {
+      console.log("hi");
       l1DaiLocked = await getL1DaiLocked(chainId);
+      console.log("l1DaiLocked", l1DaiLocked);
       l2DaiSupply = await getL2DaiSupply(blEvent.blockNumber, provider);
       if (l1DaiLocked.gt(l2DaiSupply)) {
         l2Finding(l1DaiLocked.toString(), l2DaiSupply.toString(), chainId);
