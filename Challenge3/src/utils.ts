@@ -33,7 +33,7 @@ export const l2Finding = (_l1DaiLocked: string, _l2DaiSupply: string, _chainId: 
   });
 };
 
-export const emitAlert = (_l1OptEscrowBalance: string, _l1ArbEscrowBalance: string) => {
+export const emitL1Alert = (_l1OptEscrowBalance: string, _l1ArbEscrowBalance: string) => {
   const l1DaiLockedChangeAlert: Alert = {
     alertId: "L1-DAI-LOCKED-CHANGE",
     hasAddress: () => false,
@@ -51,18 +51,32 @@ export const emitAlert = (_l1OptEscrowBalance: string, _l1ArbEscrowBalance: stri
 };
 
 const getL1Alerts = async (chainId: number): Promise<AlertsResponse> => {
-  console.log("1");
   return await getAlerts({
     alertId: "L1-DAI-LOCKED-CHANGE",
     chainId: chainId,
   });
 };
+const getMockL1Alerts = async (chainId: number): Promise<AlertsResponse> => {
+  return {
+    alerts: [
+      {
+        alertId: "L1-DAI-LOCKED-CHANGE",
+        hasAddress: () => false,
+        metadata: {
+          l1OptEscrowBalance: "31893936773236404204366707",
+          l1ArbEscrowBalance: "35712403524893527102874833",
+        },
+      },
+    ],
+    pageInfo: { hasNextPage: false },
+  };
+};
 
 export const getL1DaiLocked = async (l2ChainId: number): Promise<ethers.BigNumber> => {
-  const l1Alerts = await getL1Alerts(l2ChainId);
+  const l1Alerts = await getMockL1Alerts(l2ChainId);
   const metadata = l1Alerts.alerts[0].metadata;
-  const l1DaiLocked = l2ChainId === 10 ? metadata.l1OptEscrowBalance : metadata.l1ArbEscrowBalance;
-  return l1DaiLocked;
+  const l1DaiLockedString = l2ChainId === 10 ? metadata.l1OptEscrowBalance : metadata.l1ArbEscrowBalance;
+  return ethers.BigNumber.from(l1DaiLockedString);
 };
 
 export const getL2DaiSupply = async (blNumber: number, provider: Provider): Promise<ethers.BigNumber> => {
