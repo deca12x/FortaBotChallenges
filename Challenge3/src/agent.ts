@@ -5,8 +5,10 @@ import { Provider } from "@ethersproject/providers";
 import { l1Finding, getL1DaiLocked, getL2DaiSupply, emitL1Alert, l2Finding } from "./utils";
 
 let chainId: number;
-let l1OptEscrowBalance: number;
-let l1ArbEscrowBalance: number;
+let l1OptEscrowBalance: ethers.BigNumber = ethers.BigNumber.from(0);
+let l1ArbEscrowBalance: ethers.BigNumber = ethers.BigNumber.from(0);
+let newL1OptEscrowBalance: ethers.BigNumber;
+let newL1ArbEscrowBalance: ethers.BigNumber;
 let l1DaiLocked: ethers.BigNumber;
 let l2DaiSupply: ethers.BigNumber;
 
@@ -23,16 +25,14 @@ export function provideHandleBlock(provider: ethers.providers.Provider): HandleB
 
     if (chainId === 1) {
       const l1DaiContract = new Contract(L1_DAI_TOKEN_ADDRESS, L1_ESCROW_ABI, provider);
-      const newL1OptEscrowBalance = await l1DaiContract.balanceOf(L1_OPT_ESCROW_ADDRESS, {
+      newL1OptEscrowBalance = await l1DaiContract.balanceOf(L1_OPT_ESCROW_ADDRESS, {
         blockTag: blEvent.blockNumber,
       });
-      const newL1ArbEscrowBalance = await l1DaiContract.balanceOf(L1_ARB_ESCROW_ADDRESS, {
+      newL1ArbEscrowBalance = await l1DaiContract.balanceOf(L1_ARB_ESCROW_ADDRESS, {
         blockTag: blEvent.blockNumber,
       });
-      if (
-        (newL1OptEscrowBalance !== l1OptEscrowBalance && l1OptEscrowBalance !== null) ||
-        (newL1ArbEscrowBalance !== l1ArbEscrowBalance && l1ArbEscrowBalance !== null)
-      ) {
+
+      if (!newL1OptEscrowBalance.eq(l1OptEscrowBalance) || !newL1ArbEscrowBalance.eq(l1ArbEscrowBalance)) {
         l1OptEscrowBalance = newL1OptEscrowBalance;
         l1ArbEscrowBalance = newL1ArbEscrowBalance;
         findings.push(l1Finding(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString()));
