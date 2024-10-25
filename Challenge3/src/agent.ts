@@ -1,4 +1,4 @@
-import { Finding, FindingSeverity, FindingType, HandleBlock, BlockEvent, getEthersProvider, ethers } from "forta-agent";
+import { Finding, HandleBlock, BlockEvent, getEthersProvider, ethers } from "forta-agent";
 import { L1_DAI_TOKEN_ADDRESS, L1_ESCROW_ABI, L1_ARB_ESCROW_ADDRESS, L1_OPT_ESCROW_ADDRESS } from "./constants";
 import { Contract } from "@ethersproject/contracts";
 import { Provider } from "@ethersproject/providers";
@@ -29,7 +29,10 @@ export function provideHandleBlock(provider: ethers.providers.Provider): HandleB
       const newL1ArbEscrowBalance = await l1DaiContract.balanceOf(L1_ARB_ESCROW_ADDRESS, {
         blockTag: blEvent.blockNumber,
       });
-      if (newL1OptEscrowBalance !== l1OptEscrowBalance || newL1ArbEscrowBalance !== l1ArbEscrowBalance) {
+      if (
+        (newL1OptEscrowBalance !== l1OptEscrowBalance && l1OptEscrowBalance !== null) ||
+        (newL1ArbEscrowBalance !== l1ArbEscrowBalance && l1ArbEscrowBalance !== null)
+      ) {
         l1OptEscrowBalance = newL1OptEscrowBalance;
         l1ArbEscrowBalance = newL1ArbEscrowBalance;
         findings.push(l1Finding(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString()));
