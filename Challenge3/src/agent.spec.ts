@@ -31,34 +31,44 @@ describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
   let provider: ethers.providers.Provider;
   let initialize: any;
   let handleBlock: HandleBlock;
-  let blockEvent: BlockEvent;
 
   beforeEach(async () => {
     mockProvider = new MockEthersProvider();
     provider = mockProvider as unknown as ethers.providers.Provider;
     initialize = provideInitialize(mockProvider as unknown as ethers.providers.Provider);
     handleBlock = provideHandleBlock(provider);
-    blockEvent = createBlockEvent({
-      block: { hash: "0x1", number: 1 } as any,
-    });
   });
 
-  it("should return a finding when L1 escrow balances change", async () => {
-    const blockEvent = createBlockEvent({
-      block: { hash: "0x1", number: 1 } as any,
-    });
+  it("should return a finding only when L1 escrow balances change", async () => {
     mockProvider.setNetwork(1);
     await initialize();
 
+    // First block event - should produce findings
     mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
       inputs: [L1_OPT_ESCROW_ADDRESS],
       outputs: [l1DaiLockedOpt],
     });
     mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
       inputs: [L1_ARB_ESCROW_ADDRESS],
+      outputs: [l1DaiLockedArb],
+    });
+    let blockEvent = createBlockEvent({ block: { hash: "0x1", number: 1 } as any });
+    const findings1 = await handleBlock(blockEvent);
+    expect(findings1).toStrictEqual([l1Finding(l1DaiLockedOpt.toString(), l1DaiLockedArb.toString())]);
+
+    // Second block event - should not produce findings (no change)
+    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
+      inputs: [L1_OPT_ESCROW_ADDRESS],
       outputs: [l1DaiLockedOpt],
     });
+    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
+      inputs: [L1_ARB_ESCROW_ADDRESS],
+      outputs: [l1DaiLockedArb],
+    });
+    const findings2 = await handleBlock(blockEvent);
+    expect(findings2).toStrictEqual([]);
 
+    // Third block event - should produce findings (change)
     mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
       inputs: [L1_OPT_ESCROW_ADDRESS],
       outputs: [newL1DaiLockedOpt],
@@ -67,35 +77,8 @@ describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
       inputs: [L1_ARB_ESCROW_ADDRESS],
       outputs: [newL1DaiLockedArb],
     });
-
-    const findings = await handleBlock(blockEvent);
-    expect(findings).toStrictEqual([l1Finding(newL1DaiLockedOpt.toString(), newL1DaiLockedArb.toString())]);
-  });
-
-  it("should not return a finding when L1 escrow balances do not change", async () => {
-    mockProvider.setNetwork(1);
-    await initialize();
-
-    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
-      inputs: [L1_OPT_ESCROW_ADDRESS],
-      outputs: [l1DaiLockedOpt],
-    });
-    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
-      inputs: [L1_ARB_ESCROW_ADDRESS],
-      outputs: [l1DaiLockedArb],
-    });
-
-    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
-      inputs: [L1_OPT_ESCROW_ADDRESS],
-      outputs: [l1DaiLockedOpt],
-    });
-    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
-      inputs: [L1_ARB_ESCROW_ADDRESS],
-      outputs: [l1DaiLockedArb],
-    });
-
-    const findings = await handleBlock(blockEvent);
-    expect(findings).toStrictEqual([]); // Expect no findings since balances did not change
+    const findings3 = await handleBlock(blockEvent);
+    expect(findings3).toStrictEqual([l1Finding(newL1DaiLockedOpt.toString(), newL1DaiLockedArb.toString())]);
   });
 
   // it("should not return any findings if conditions are not met", async () => {
