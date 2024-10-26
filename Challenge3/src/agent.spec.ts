@@ -31,12 +31,16 @@ describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
   let provider: ethers.providers.Provider;
   let initialize: any;
   let handleBlock: HandleBlock;
+  let blockEvent: BlockEvent;
 
   beforeEach(async () => {
     mockProvider = new MockEthersProvider();
     provider = mockProvider as unknown as ethers.providers.Provider;
     initialize = provideInitialize(mockProvider as unknown as ethers.providers.Provider);
     handleBlock = provideHandleBlock(provider);
+    blockEvent = createBlockEvent({
+      block: { hash: "0x1", number: 1 } as any,
+    });
   });
 
   it("should return a finding when L1 escrow balances change", async () => {
@@ -68,50 +72,33 @@ describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
     expect(findings).toStrictEqual([l1Finding(newL1DaiLockedOpt.toString(), newL1DaiLockedArb.toString())]);
   });
 
-  // it("should not return a finding when L1 escrow balances do not change", async () => {
-  //   const blockEvent = createBlockEvent({
-  //     block: { hash: "0x1", number: 1 } as any,
-  //   });
-  //   mockProvider.setNetwork(1);
-  //   await initialize();
+  it("should not return a finding when L1 escrow balances do not change", async () => {
+    mockProvider.setNetwork(1);
+    await initialize();
 
-  //   mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
-  //     inputs: [L1_OPT_ESCROW_ADDRESS],
-  //     outputs: [MOCK_L1_STATES.l1DaiLockedOpt],
-  //   });
-  //   mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
-  //     inputs: [L1_ARB_ESCROW_ADDRESS],
-  //     outputs: [MOCK_L1_STATES.l1DaiLockedArb],
-  //   });
+    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
+      inputs: [L1_OPT_ESCROW_ADDRESS],
+      outputs: [l1DaiLockedOpt],
+    });
+    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
+      inputs: [L1_ARB_ESCROW_ADDRESS],
+      outputs: [l1DaiLockedArb],
+    });
 
-  //   mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
-  //     inputs: [L1_OPT_ESCROW_ADDRESS],
-  //     outputs: [MOCK_L1_STATES.l1DaiLockedOpt],
-  //   });
-  //   mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
-  //     inputs: [L1_ARB_ESCROW_ADDRESS],
-  //     outputs: [MOCK_L1_STATES.l1DaiLockedArb],
-  //   });
+    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
+      inputs: [L1_OPT_ESCROW_ADDRESS],
+      outputs: [l1DaiLockedOpt],
+    });
+    mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 1, L1_ESCROW_IFACE, "balanceOf", {
+      inputs: [L1_ARB_ESCROW_ADDRESS],
+      outputs: [l1DaiLockedArb],
+    });
 
-  //   const findings = await handleBlock(blockEvent);
-  //   expect(findings).toStrictEqual([]); // Expect no findings since balances did not change
-  // });
-
-  // it("should return a finding when L1 DAI locked is greater than L2 DAI supply", async () => {
-  //   // Mock the L2 DAI supply
-  //   mockProvider.addCallTo(L2_DAI_TOKEN_ADDRESS, 0, new ethers.utils.Interface(L2_TOKEN_ABI), "totalSupply", {
-  //     inputs: [],
-  //     outputs: [ethers.BigNumber.from("500")],
-  //   });
-
-  //   const findings = await handleBlock(mockBlockEvent);
-  //   expect(findings).toStrictEqual([
-  //     l2Finding("1000", "500", 10), // Assuming chainId 10 for Optimism
-  //   ]);
-  // });
+    const findings = await handleBlock(blockEvent);
+    expect(findings).toStrictEqual([]); // Expect no findings since balances did not change
+  });
 
   // it("should not return any findings if conditions are not met", async () => {
-  //   // Mock the L1 DAI contract calls with no changes
   //   mockProvider.addCallTo(L1_DAI_TOKEN_ADDRESS, 0, new ethers.utils.Interface(L1_ESCROW_ABI), "balanceOf", {
   //     inputs: [L1_OPT_ESCROW_ADDRESS],
   //     outputs: [ethers.BigNumber.from("1000")],
@@ -127,7 +114,20 @@ describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
   //     outputs: [ethers.BigNumber.from("3000")],
   //   });
 
-  //   const findings = await handleBlock(mockBlockEvent);
+  //   const findings = await handleBlock(blockEvent);
   //   expect(findings).toStrictEqual([]);
+  // });
+
+  // it("should return a finding when L1 DAI locked is greater than L2 DAI supply", async () => {
+  //   // Mock the L2 DAI supply
+  //   mockProvider.addCallTo(L2_DAI_TOKEN_ADDRESS, 0, new ethers.utils.Interface(L2_TOKEN_ABI), "totalSupply", {
+  //     inputs: [],
+  //     outputs: [ethers.BigNumber.from("500")],
+  //   });
+
+  //   const findings = await handleBlock(mockBlockEvent);
+  //   expect(findings).toStrictEqual([
+  //     l2Finding("1000", "500", 10), // Assuming chainId 10 for Optimism
+  //   ]);
   // });
 });
