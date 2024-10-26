@@ -16,12 +16,10 @@ const l1DaiLockedArb = ethers.BigNumber.from("2000");
 const newL1DaiLockedOpt = ethers.BigNumber.from("1100");
 const newL1DaiLockedArb = ethers.BigNumber.from("2100");
 
-// const MOCK_STATE_2 = {
-//   l1DaiLockedOpt: ethers.BigNumber.from("1000"),
-//   l2DaiSupplyOpt: ethers.BigNumber.from("1100"),
-//   l1DaiLockedArb: ethers.BigNumber.from("2000"),
-//   l2DaiSupplyArb: ethers.BigNumber.from("2100"),
-// };
+const l2DaiSupplyOpt = ethers.BigNumber.from("1000");
+const l2DaiSupplyArb = ethers.BigNumber.from("2000");
+const higherL2DaiSupplyOpt = ethers.BigNumber.from("1500");
+const higherL2DaiSupplyArb = ethers.BigNumber.from("2500");
 
 const L1_ESCROW_IFACE = new ethers.utils.Interface(L1_ESCROW_ABI);
 const L2_TOKEN_IFACE = new ethers.utils.Interface(L2_TOKEN_ABI);
@@ -83,18 +81,15 @@ describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
     expect(findings3).toStrictEqual([l1Finding(newL1DaiLockedOpt.toString(), newL1DaiLockedArb.toString())]);
   });
 
-  it("should return a finding when L1 DAI locked is greater than L2 DAI supply", async () => {
+  it("should return a finding when L2 DAI supply on Optimism is greater than L1 DAI locked", async () => {
     mockProvider.setNetwork(10);
     await initialize();
-    // Mock the L2 DAI supply
-    mockProvider.addCallTo(L2_DAI_TOKEN_ADDRESS, 0, L2_TOKEN_IFACE, "totalSupply", {
+    mockProvider.addCallTo(L2_DAI_TOKEN_ADDRESS, 1, L2_TOKEN_IFACE, "totalSupply", {
       inputs: [],
-      outputs: [ethers.BigNumber.from("500")],
+      outputs: [higherL2DaiSupplyOpt],
     });
-    let blockEvent = createBlockEvent({ block: { hash: "0x1", number: 1 } as any });
+    const blockEvent = createBlockEvent({ block: { hash: "0x1", number: 1 } as any });
     const findings = await handleBlock(blockEvent);
-    expect(findings).toStrictEqual([
-      l2Finding("1000", "500", 10), // Assuming chainId 10 for Optimism
-    ]);
+    expect(findings).toStrictEqual([l2Finding(l1DaiLockedOpt.toString(), higherL2DaiSupplyOpt.toString(), 10)]);
   });
 });

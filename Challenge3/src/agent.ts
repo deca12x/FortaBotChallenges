@@ -41,8 +41,8 @@ export function provideHandleBlock(provider: ethers.providers.Provider): HandleB
     } else {
       l1DaiLocked = await getL1DaiLocked(chainId);
       l2DaiSupply = await getL2DaiSupply(blEvent.blockNumber, provider);
-      if (l1DaiLocked.gt(l2DaiSupply)) {
-        l2Finding(l1DaiLocked.toString(), l2DaiSupply.toString(), chainId);
+      if (l2DaiSupply.gt(l1DaiLocked)) {
+        findings.push(l2Finding(l1DaiLocked.toString(), l2DaiSupply.toString(), chainId));
       }
     }
     return findings;

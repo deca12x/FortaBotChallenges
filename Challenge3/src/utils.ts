@@ -63,8 +63,8 @@ const getMockL1Alerts = async (chainId: number): Promise<AlertsResponse> => {
         alertId: "L1-DAI-LOCKED-CHANGE",
         hasAddress: () => false,
         metadata: {
-          l1OptEscrowBalance: "31893936773236404204366707",
-          l1ArbEscrowBalance: "35712403524893527102874833",
+          l1OptEscrowBalance: "1000",
+          l1ArbEscrowBalance: "2000",
         },
       },
     ],
