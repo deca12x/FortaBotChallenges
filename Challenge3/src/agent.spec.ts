@@ -84,12 +84,46 @@ describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
   it("should return a finding when L2 DAI supply on Optimism is greater than L1 DAI locked", async () => {
     mockProvider.setNetwork(10);
     await initialize();
+
+    // First block event - should not produce findings
     mockProvider.addCallTo(L2_DAI_TOKEN_ADDRESS, 1, L2_TOKEN_IFACE, "totalSupply", {
+      inputs: [],
+      outputs: [l2DaiSupplyOpt],
+    });
+    const blockEvent1 = createBlockEvent({ block: { hash: "0x1", number: 1 } as any });
+    const findings1 = await handleBlock(blockEvent1);
+    expect(findings1).toStrictEqual([]);
+
+    // Second block event - should produce findings
+    mockProvider.addCallTo(L2_DAI_TOKEN_ADDRESS, 2, L2_TOKEN_IFACE, "totalSupply", {
       inputs: [],
       outputs: [higherL2DaiSupplyOpt],
     });
-    const blockEvent = createBlockEvent({ block: { hash: "0x1", number: 1 } as any });
-    const findings = await handleBlock(blockEvent);
-    expect(findings).toStrictEqual([l2Finding(l1DaiLockedOpt.toString(), higherL2DaiSupplyOpt.toString(), 10)]);
+    const blockEvent2 = createBlockEvent({ block: { hash: "0x2", number: 2 } as any });
+    const findings2 = await handleBlock(blockEvent2);
+    expect(findings2).toStrictEqual([l2Finding(l1DaiLockedOpt.toString(), higherL2DaiSupplyOpt.toString(), 10)]);
+  });
+
+  it("should return a finding when L2 DAI supply on Arbitrum is greater than L1 DAI locked", async () => {
+    mockProvider.setNetwork(42161);
+    await initialize();
+
+    // First block event - should not produce findings
+    mockProvider.addCallTo(L2_DAI_TOKEN_ADDRESS, 1, L2_TOKEN_IFACE, "totalSupply", {
+      inputs: [],
+      outputs: [l2DaiSupplyArb],
+    });
+    const blockEvent1 = createBlockEvent({ block: { hash: "0x1", number: 1 } as any });
+    const findings1 = await handleBlock(blockEvent1);
+    expect(findings1).toStrictEqual([]);
+
+    // Second block event - should produce findings
+    mockProvider.addCallTo(L2_DAI_TOKEN_ADDRESS, 2, L2_TOKEN_IFACE, "totalSupply", {
+      inputs: [],
+      outputs: [higherL2DaiSupplyArb],
+    });
+    const blockEvent2 = createBlockEvent({ block: { hash: "0x2", number: 2 } as any });
+    const findings2 = await handleBlock(blockEvent2);
+    expect(findings2).toStrictEqual([l2Finding(l1DaiLockedArb.toString(), higherL2DaiSupplyArb.toString(), 42161)]);
   });
 });
