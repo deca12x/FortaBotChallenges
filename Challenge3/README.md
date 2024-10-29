@@ -2,7 +2,7 @@
 
 ## Description
 
-This bot monitors the DAI locked in L1 escrow contracts for Optimism and Arbitrum and compares it with the DAI supply on L2 networks.
+This bot monitors the DAI locked in L1 escrow contracts for Optimism and Arbitrum and compares it with the DAI supply on Optimism and Arbitrum networks.
 
 ## Supported Chains
 

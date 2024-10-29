@@ -3,7 +3,7 @@
   "displayName": "MakerDAO Bridge Invariant Bot",
   "version": "0.0.1",
   "description": "This bot monitors the MakerDAO L1-L2 bridge invariants for Optimism and Arbitrum.",
-  "longDescription": "This bot monitors the DAI locked in L1 escrow contracts for Optimism and Arbitrum and compares it with the DAI supply on L2 networks.",
+  "longDescription": "This bot monitors the DAI locked in L1 escrow contracts for Optimism and Arbitrum and compares it with the DAI supply on Optimism and Arbitrum networks.",
   "repository": "https://github.com/deca12x/FortaBotChallenges/tree/main/Challenge3",
   "licenseUrl": "https://github.com/forta-network/forta-bot-sdk/blob/master/starter-project/LICENSE.md",
   "promoUrl": "https://forta.org",
