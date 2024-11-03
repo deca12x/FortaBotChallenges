@@ -1,4 +1,12 @@
-import { Finding, FindingSeverity, FindingType, HandleBlock, createBlockEvent, ethers } from "forta-agent";
+import {
+  Finding,
+  FindingSeverity,
+  FindingType,
+  HandleBlock,
+  createBlockEvent,
+  AlertsResponse,
+  ethers,
+} from "forta-agent";
 import { MockEthersProvider } from "forta-agent-tools/lib/test";
 import { provideInitialize, provideHandleBlock } from "./agent";
 import {
@@ -24,6 +32,26 @@ const higherL2DaiSupplyArb = ethers.BigNumber.from("2500");
 const L1_ESCROW_IFACE = new ethers.utils.Interface(L1_ESCROW_ABI);
 const L2_TOKEN_IFACE = new ethers.utils.Interface(L2_TOKEN_ABI);
 
+const getMockL1Alerts = async (options: {
+  botIds: string[];
+  alertId?: string;
+  chainId?: number;
+}): Promise<AlertsResponse> => {
+  return {
+    alerts: [
+      {
+        alertId: "L1-DAI-LOCKED-CHANGE",
+        hasAddress: () => false,
+        metadata: {
+          l1OptEscrowBalance: "1000",
+          l1ArbEscrowBalance: "2000",
+        },
+      },
+    ],
+    pageInfo: { hasNextPage: false },
+  };
+};
+
 describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
   let mockProvider: MockEthersProvider;
   let provider: ethers.providers.Provider;
@@ -34,7 +62,7 @@ describe("MakerDAO Bridge Invariant Bot Test Suite", () => {
     mockProvider = new MockEthersProvider();
     provider = mockProvider as unknown as ethers.providers.Provider;
     initialize = provideInitialize(mockProvider as unknown as ethers.providers.Provider);
-    handleBlock = provideHandleBlock(provider);
+    handleBlock = provideHandleBlock(provider, getMockL1Alerts);
   });
 
   it("should return a finding only when L1 escrow balances change", async () => {

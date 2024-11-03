@@ -33,47 +33,21 @@ export const l2Finding = (_l1DaiLocked: string, _l2DaiSupply: string, _chainId: 
   });
 };
 
-export const emitL1Alert = (_l1OptEscrowBalance: string, _l1ArbEscrowBalance: string) => {
-  const l1DaiLockedChangeAlert: Alert = {
-    alertId: "L1-DAI-LOCKED-CHANGE",
-    hasAddress: () => false,
-    metadata: {
-      l1OptEscrowBalance: ethers.BigNumber,
-      l1ArbEscrowBalance: ethers.BigNumber,
-    },
-  };
-  const l1DaiLockedChangeAlertsResponse: AlertsResponse = {
-    alerts: [l1DaiLockedChangeAlert],
-    pageInfo: { hasNextPage: false },
-  };
-  l1DaiLockedChangeAlertsResponse.alerts[0].metadata.latestL1OptEscrowBalance = _l1OptEscrowBalance;
-  l1DaiLockedChangeAlertsResponse.alerts[0].metadata.latestL1ArbEscrowBalance = _l1ArbEscrowBalance;
-};
+export type GetAlertsFunction = (options: {
+  botIds: string[]; // required per docs
+  alertId?: string; // we use this
+  chainId?: number; // we use this
+}) => Promise<AlertsResponse>;
 
-const getL1Alerts = async (chainId: number): Promise<AlertsResponse> => {
-  return await getAlerts({
+export const getL1DaiLocked = async (
+  l2ChainId: number,
+  getAlertsFunc: GetAlertsFunction
+): Promise<ethers.BigNumber> => {
+  const l1Alerts = await getAlertsFunc({
+    botIds: [""],
     alertId: "L1-DAI-LOCKED-CHANGE",
-    chainId: chainId,
+    chainId: 1,
   });
-};
-const getMockL1Alerts = async (chainId: number): Promise<AlertsResponse> => {
-  return {
-    alerts: [
-      {
-        alertId: "L1-DAI-LOCKED-CHANGE",
-        hasAddress: () => false,
-        metadata: {
-          l1OptEscrowBalance: "1000",
-          l1ArbEscrowBalance: "2000",
-        },
-      },
-    ],
-    pageInfo: { hasNextPage: false },
-  };
-};
-
-export const getL1DaiLocked = async (l2ChainId: number): Promise<ethers.BigNumber> => {
-  const l1Alerts = await getMockL1Alerts(l2ChainId);
   const metadata = l1Alerts.alerts[0].metadata;
   const l1DaiLockedString = l2ChainId === 10 ? metadata.l1OptEscrowBalance : metadata.l1ArbEscrowBalance;
   return ethers.BigNumber.from(l1DaiLockedString);

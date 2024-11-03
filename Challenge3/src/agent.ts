@@ -1,8 +1,8 @@
-import { Finding, HandleBlock, BlockEvent, getEthersProvider, Initialize, ethers } from "forta-agent";
+import { Finding, HandleBlock, BlockEvent, getEthersProvider, Initialize, ethers, getAlerts } from "forta-agent";
 import { L1_DAI_TOKEN_ADDRESS, L1_ESCROW_ABI, L1_ARB_ESCROW_ADDRESS, L1_OPT_ESCROW_ADDRESS } from "./constants";
 import { Contract } from "@ethersproject/contracts";
 import { Provider } from "@ethersproject/providers";
-import { l1Finding, getL1DaiLocked, getL2DaiSupply, emitL1Alert, l2Finding } from "./utils";
+import { l1Finding, getL1DaiLocked, getL2DaiSupply, l2Finding, GetAlertsFunction } from "./utils";
 
 let chainId: number;
 let l1OptEscrowBalance: ethers.BigNumber = ethers.BigNumber.from(0);
@@ -19,7 +19,7 @@ export function provideInitialize(provider: ethers.providers.Provider): Initiali
   };
 }
 
-export function provideHandleBlock(provider: ethers.providers.Provider): HandleBlock {
+export function provideHandleBlock(provider: ethers.providers.Provider, getAlertsFunc: GetAlertsFunction): HandleBlock {
   return async (blockEvent: BlockEvent) => {
     const findings: Finding[] = [];
 
@@ -35,11 +35,10 @@ export function provideHandleBlock(provider: ethers.providers.Provider): HandleB
       if (!newL1OptEscrowBalance.eq(l1OptEscrowBalance) || !newL1ArbEscrowBalance.eq(l1ArbEscrowBalance)) {
         l1OptEscrowBalance = newL1OptEscrowBalance;
         l1ArbEscrowBalance = newL1ArbEscrowBalance;
-        findings.push(l1Finding(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString()));
-        emitL1Alert(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString());
+        findings.push(l1Finding(l1OptEscrowBalance.toString(), l1ArbEscrowBalance.toString())); //
       }
     } else {
-      l1DaiLocked = await getL1DaiLocked(chainId);
+      l1DaiLocked = await getL1DaiLocked(chainId, getAlertsFunc);
       l2DaiSupply = await getL2DaiSupply(blockEvent.blockNumber, provider);
       if (l2DaiSupply.gt(l1DaiLocked)) {
         findings.push(l2Finding(l1DaiLocked.toString(), l2DaiSupply.toString(), chainId));
@@ -51,5 +50,5 @@ export function provideHandleBlock(provider: ethers.providers.Provider): HandleB
 
 export default {
   initialize: provideInitialize(getEthersProvider()),
-  handleBlock: provideHandleBlock(getEthersProvider()),
+  handleBlock: provideHandleBlock(getEthersProvider(), getAlerts),
 };
