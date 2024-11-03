@@ -1,12 +1,4 @@
-import {
-  Finding,
-  FindingSeverity,
-  FindingType,
-  HandleBlock,
-  createBlockEvent,
-  AlertsResponse,
-  ethers,
-} from "forta-agent";
+import { HandleBlock, createBlockEvent, AlertsResponse, ethers } from "forta-agent";
 import { MockEthersProvider } from "forta-agent-tools/lib/test";
 import { provideInitialize, provideHandleBlock } from "./agent";
 import {
@@ -17,7 +9,7 @@ import {
   L1_ESCROW_ABI,
   L2_TOKEN_ABI,
 } from "./constants";
-import { l1Finding, l2Finding } from "./utils";
+import { l1Finding, l2Finding } from "./findings";
 
 const l1DaiLockedOpt = ethers.BigNumber.from("1000");
 const l1DaiLockedArb = ethers.BigNumber.from("2000");

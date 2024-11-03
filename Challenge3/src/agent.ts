@@ -1,8 +1,8 @@
 import { Finding, HandleBlock, BlockEvent, getEthersProvider, Initialize, ethers, getAlerts } from "forta-agent";
 import { L1_DAI_TOKEN_ADDRESS, L1_ESCROW_ABI, L1_ARB_ESCROW_ADDRESS, L1_OPT_ESCROW_ADDRESS } from "./constants";
 import { Contract } from "@ethersproject/contracts";
-import { Provider } from "@ethersproject/providers";
-import { l1Finding, getL1DaiLocked, getL2DaiSupply, l2Finding, GetAlertsFunction } from "./utils";
+import { getL1DaiLocked, getL2DaiSupply, GetAlertsFunction } from "./utils";
+import { l1Finding, l2Finding } from "./findings";
 
 let chainId: number;
 let l1OptEscrowBalance: ethers.BigNumber = ethers.BigNumber.from(0);
