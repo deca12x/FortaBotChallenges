@@ -37,3 +37,13 @@ jobs:
         working-directory: ./Challenge2
         shell: bash
         run: npm test
+
+      - name: Install Challenge 3 dependencies
+        working-directory: ./Challenge3
+        shell: bash
+        run: npm install
+
+      - name: Run Challenge 3 tests
+        working-directory: ./Challenge3
+        shell: bash
+        run: npm test
